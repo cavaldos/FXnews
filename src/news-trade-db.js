@@ -1,7 +1,11 @@
 const { notion } = require('./index');
+const { deriveRecommendedAction, normalizeBiasKey } = require('./analysis/recommendedAction');
+const { normalizeSignalSymbols } = require('./analysis/symbolSelector');
+const { inferSymbols } = require('./analysis/newsSignalGenerator');
 
 const DEFAULT_DATABASE_ID = 'b64498d9-1fdc-40dd-97ac-d17935103576';
-const CONFIGURED_DATABASE_ID = process.env.NOTION_DATABASE_ID || '';
+const config = require('./config');
+const CONFIGURED_DATABASE_ID = config.notion.databaseId || '';
 const DATABASE_ID = CONFIGURED_DATABASE_ID || DEFAULT_DATABASE_ID;
 const NOTION_TOKEN = process.env.NOTION_TOKEN;
 
@@ -11,35 +15,41 @@ const PROPERTY_ALIASES = {
   time: ['Time (ET)', 'Thoi gian (US)', 'Thời gian (US)', 'Time'],
   bias: ['Bias'],
   impact: ['Impact', 'Muc do anh huong', 'Mức độ ảnh hưởng'],
-  url: ['Source URL', 'Link lien quan', 'Link liên quan', 'Source'],
-  details: ['Details', 'Thong tin chi tiet', 'Thông tin chi tiết', 'Description'],
-  source: ['Source', 'Nguon tin', 'Nguồn tin'],
-  status: ['Status', 'Trang thai', 'Trạng thái'],
-  // Phase 2: Multi-Model Analysis columns
-  aiConsensusScore: ['AI Consensus Score'],
-  perModelResults: ['Per-Model Results'],
-  analysisStatus: ['Analysis Status'],
   recommendedAction: ['Recommended Action'],
-  riskLevel: ['Risk Level'],
-  // Phase 3: Verification columns
-  verificationStatus: ['Verification Status'],
-  priceAtSignal: ['Price at Signal'],
-  priceChange1D: ['Price Change 1D %'],
-  priceChange3D: ['Price Change 3D %'],
-  verificationScore: ['Verification Score'],
-  verificationNotes: ['Verification Notes'],
+  check: ['Check'],
+  url: ['Source URL', 'Link lien quan', 'Link liên quan'],
+  result: ['Result'],
+  details: ['Details', 'Thong tin chi tiet', 'Thông tin chi tiết', 'Description'],
+  status: ['Status', 'Trang thai', 'Trạng thái'],
 };
 
 let cachedSchema = null;
+
+function isHoldAction(action = '') {
+  return String(action || '').trim().toLowerCase().includes('hold');
+}
+
+function isDirectionalSignal(input = {}) {
+  const biasKey = normalizeBiasKey(input.bias);
+  return biasKey !== 'neutral' && !isHoldAction(input.recommendedAction);
+}
+
+function assertDirectionalSignal(input = {}) {
+  if (isDirectionalSignal(input)) {
+    return;
+  }
+
+  throw new Error('Neutral/Hold signals are not allowed. Skip saving until the bias is directional.');
+}
 
 function hasNewsTradeFields(map) {
   return Boolean(
     map.symbol ||
     map.bias ||
     map.impact ||
+    map.recommendedAction ||
     map.url ||
     map.details ||
-    map.source ||
     map.status
   );
 }
@@ -79,12 +89,7 @@ function pickProperty(properties, aliases, expectedType) {
     }
   }
 
-  if (!expectedType) {
-    return null;
-  }
-
-  const byType = entries.find(([, meta]) => meta.type === expectedType);
-  return byType ? byType[0] : null;
+  return null;
 }
 
 function buildSchema(properties, databaseId) {
@@ -94,23 +99,12 @@ function buildSchema(properties, databaseId) {
     time: pickProperty(properties, PROPERTY_ALIASES.time, 'date'),
     bias: pickProperty(properties, PROPERTY_ALIASES.bias, 'select'),
     impact: pickProperty(properties, PROPERTY_ALIASES.impact, 'select'),
-    url: pickProperty(properties, PROPERTY_ALIASES.url, 'url'),
-    details: pickProperty(properties, PROPERTY_ALIASES.details, 'rich_text'),
-    source: pickProperty(properties, PROPERTY_ALIASES.source, 'select'),
-    status: pickProperty(properties, PROPERTY_ALIASES.status, 'select'),
-    // Phase 2 columns
-    aiConsensusScore: pickProperty(properties, PROPERTY_ALIASES.aiConsensusScore, 'number'),
-    perModelResults: pickProperty(properties, PROPERTY_ALIASES.perModelResults, 'rich_text'),
-    analysisStatus: pickProperty(properties, PROPERTY_ALIASES.analysisStatus, 'select'),
     recommendedAction: pickProperty(properties, PROPERTY_ALIASES.recommendedAction, 'select'),
-    riskLevel: pickProperty(properties, PROPERTY_ALIASES.riskLevel, 'select'),
-    // Phase 3: Verification columns
-    verificationStatus: pickProperty(properties, PROPERTY_ALIASES.verificationStatus, 'select'),
-    priceAtSignal: pickProperty(properties, PROPERTY_ALIASES.priceAtSignal, 'number'),
-    priceChange1D: pickProperty(properties, PROPERTY_ALIASES.priceChange1D, 'number'),
-    priceChange3D: pickProperty(properties, PROPERTY_ALIASES.priceChange3D, 'number'),
-    verificationScore: pickProperty(properties, PROPERTY_ALIASES.verificationScore, 'number'),
-    verificationNotes: pickProperty(properties, PROPERTY_ALIASES.verificationNotes, 'rich_text'),
+    check: pickProperty(properties, PROPERTY_ALIASES.check, 'select'),
+    url: pickProperty(properties, PROPERTY_ALIASES.url, 'url'),
+    result: pickProperty(properties, PROPERTY_ALIASES.result, 'rich_text'),
+    details: pickProperty(properties, PROPERTY_ALIASES.details, 'rich_text'),
+    status: pickProperty(properties, PROPERTY_ALIASES.status, 'select'),
   };
 
   return {
@@ -133,12 +127,12 @@ async function getSchema() {
       const properties = await fetchDatabaseProperties(databaseId);
       const schema = buildSchema(properties, databaseId);
 
-      if (schema.map.event && hasNewsTradeFields(schema.map)) {
+      if (schema.map.event) {
         cachedSchema = schema;
         return cachedSchema;
       }
 
-      lastError = new Error(`Database ${databaseId} does not match News Trade Signals schema`);
+      lastError = new Error(`Database ${databaseId} does not contain a title column for events`);
     } catch (error) {
       lastError = error;
     }
@@ -166,22 +160,28 @@ async function queryDatabase(databaseId, body = {}) {
   return res.json();
 }
 
-async function addSignal({ event, symbols, time, bias, impact, url, details, source, status }) {
+async function addSignal({ event, symbols, time, bias, impact, recommendedAction, url, details, status, sourceUrls, sources }) {
   const schema = await getSchema();
 
-  if (!schema.map.event || !hasNewsTradeFields(schema.map)) {
-    throw new Error('NOTION_DATABASE_ID is not a News Trade Signals schema. Please point to the News Trade Signals AMP database.');
+  if (!schema.map.event) {
+    throw new Error('Target Notion database must have an Event/Name title property.');
   }
 
   const properties = {};
+  const inferredSymbols = inferSymbols(event || details || '');
+  const explicitSymbols = Array.isArray(symbols) ? symbols.filter(Boolean) : [];
+  const canonicalSymbols = normalizeSignalSymbols(
+    explicitSymbols.length ? explicitSymbols : inferredSymbols,
+    { text: event || details || '' }
+  );
 
   properties[schema.map.event] = {
     title: [{ text: { content: event || 'Trading Event' } }],
   };
 
-  if (schema.map.symbol && symbols?.length) {
+  if (schema.map.symbol && canonicalSymbols.length) {
     properties[schema.map.symbol] = {
-      multi_select: symbols.map(symbol => ({ name: symbol.toUpperCase() })),
+      multi_select: canonicalSymbols.map(symbol => ({ name: symbol.toUpperCase() })),
     };
   }
 
@@ -199,6 +199,18 @@ async function addSignal({ event, symbols, time, bias, impact, url, details, sou
     properties[schema.map.impact] = { select: { name: impact } };
   }
 
+  const derivedRecommendedAction = recommendedAction || deriveRecommendedAction({
+    bias,
+    impact,
+    corroborationCount: Math.max(1, (sourceUrls || []).length || (sources || []).length || 1),
+  });
+
+  assertDirectionalSignal({ bias, recommendedAction: derivedRecommendedAction });
+
+  if (schema.map.recommendedAction && derivedRecommendedAction) {
+    properties[schema.map.recommendedAction] = { select: { name: derivedRecommendedAction } };
+  }
+
   if (schema.map.url && url) {
     properties[schema.map.url] = { url };
   }
@@ -207,10 +219,6 @@ async function addSignal({ event, symbols, time, bias, impact, url, details, sou
     properties[schema.map.details] = {
       rich_text: [{ text: { content: details.slice(0, 2000) } }],
     };
-  }
-
-  if (schema.map.source && source) {
-    properties[schema.map.source] = { select: { name: source } };
   }
 
   if (schema.map.status) {
@@ -261,30 +269,28 @@ function getPropertyValue(page, propName) {
 }
 
 function parseSignal(page, schema) {
+  const event = getPropertyValue(page, schema.map.event) || '';
+  const details = getPropertyValue(page, schema.map.details) || '';
+  const inferredSymbols = inferSymbols(event || details || '');
+  const storedSymbols = getPropertyValue(page, schema.map.symbol) || [];
+  const canonicalSymbols = normalizeSignalSymbols(
+    storedSymbols.length ? storedSymbols : inferredSymbols,
+    { text: event || details || '' }
+  );
+
   return {
     id: page.id,
-    event: getPropertyValue(page, schema.map.event) || '',
-    symbols: getPropertyValue(page, schema.map.symbol) || [],
+    event,
+    symbols: canonicalSymbols,
     time: getPropertyValue(page, schema.map.time),
     bias: getPropertyValue(page, schema.map.bias) || '',
     impact: getPropertyValue(page, schema.map.impact) || '',
-    url: getPropertyValue(page, schema.map.url) || '',
-    details: getPropertyValue(page, schema.map.details) || '',
-    source: getPropertyValue(page, schema.map.source) || '',
-    status: getPropertyValue(page, schema.map.status) || '',
-    // Phase 2 fields
-    aiConsensusScore: getPropertyValue(page, schema.map.aiConsensusScore),
-    perModelResults: getPropertyValue(page, schema.map.perModelResults) || '',
-    analysisStatus: getPropertyValue(page, schema.map.analysisStatus) || '',
     recommendedAction: getPropertyValue(page, schema.map.recommendedAction) || '',
-    riskLevel: getPropertyValue(page, schema.map.riskLevel) || '',
-    // Phase 3: Verification fields
-    verificationStatus: getPropertyValue(page, schema.map.verificationStatus) || '',
-    priceAtSignal: getPropertyValue(page, schema.map.priceAtSignal),
-    priceChange1D: getPropertyValue(page, schema.map.priceChange1D),
-    priceChange3D: getPropertyValue(page, schema.map.priceChange3D),
-    verificationScore: getPropertyValue(page, schema.map.verificationScore),
-    verificationNotes: getPropertyValue(page, schema.map.verificationNotes) || '',
+    check: getPropertyValue(page, schema.map.check) || '',
+    url: getPropertyValue(page, schema.map.url) || '',
+    result: getPropertyValue(page, schema.map.result) || '',
+    details,
+    status: getPropertyValue(page, schema.map.status) || '',
   };
 }
 
@@ -332,115 +338,116 @@ async function updateSignalStatus(pageId, status) {
   });
 }
 
-async function updateSignalAnalysis(pageId, analysisResult) {
+async function updateSignalFields(pageId, updates) {
   const schema = await getSchema();
   const properties = {};
+  let currentPage = null;
 
-  if (schema.map.aiConsensusScore && analysisResult.aiConsensusScore != null) {
-    properties[schema.map.aiConsensusScore] = {
-      number: analysisResult.aiConsensusScore,
+  if (Object.prototype.hasOwnProperty.call(updates, 'bias') && normalizeBiasKey(updates.bias) === 'neutral') {
+    throw new Error('Neutral/Hold signals are not allowed. Skip saving until the bias is directional.');
+  }
+
+  if (Object.prototype.hasOwnProperty.call(updates, 'recommendedAction') && isHoldAction(updates.recommendedAction)) {
+    throw new Error('Neutral/Hold signals are not allowed. Skip saving until the bias is directional.');
+  }
+
+  if (
+    schema.map.recommendedAction &&
+    !updates.recommendedAction &&
+    (updates.bias || updates.impact) &&
+    (!updates.bias || !updates.impact)
+  ) {
+    currentPage = await notion.pages.retrieve({ page_id: pageId });
+  }
+
+  if (schema.map.event && updates.event != null) {
+    properties[schema.map.event] = {
+      title: [{ text: { content: String(updates.event || 'Trading Event').slice(0, 2000) } }],
     };
   }
 
-  if (schema.map.perModelResults && analysisResult.perModelResults) {
-    properties[schema.map.perModelResults] = {
-      rich_text: [{ text: { content: String(analysisResult.perModelResults).slice(0, 2000) } }],
+  if (schema.map.symbol && Array.isArray(updates.symbols)) {
+    const inferredSymbols = inferSymbols(updates.event || updates.details || '');
+    const explicitSymbols = Array.isArray(updates.symbols) ? updates.symbols.filter(Boolean) : [];
+    const canonicalSymbols = normalizeSignalSymbols(
+      explicitSymbols.length ? explicitSymbols : inferredSymbols,
+      {
+        text: updates.event || updates.details || '',
+      }
+    );
+    properties[schema.map.symbol] = {
+      multi_select: canonicalSymbols
+        .map(symbol => String(symbol || '').trim().toUpperCase())
+        .filter(Boolean)
+        .slice(0, 3)
+        .map(name => ({ name })),
     };
   }
 
-  if (schema.map.analysisStatus && analysisResult.analysisStatus) {
-    properties[schema.map.analysisStatus] = {
-      select: { name: analysisResult.analysisStatus },
+  if (schema.map.time && updates.time) {
+    properties[schema.map.time] = {
+      date: { start: updates.time, time_zone: 'America/New_York' },
     };
   }
 
-  if (schema.map.recommendedAction && analysisResult.recommendedAction) {
-    properties[schema.map.recommendedAction] = {
-      select: { name: analysisResult.recommendedAction },
-    };
-  }
-
-  if (schema.map.riskLevel && analysisResult.riskLevel) {
-    properties[schema.map.riskLevel] = {
-      select: { name: analysisResult.riskLevel },
-    };
-  }
-
-  // Optionally update bias if consensus differs
-  if (schema.map.bias && analysisResult.consensusBias) {
+  if (schema.map.bias && updates.bias) {
     properties[schema.map.bias] = {
-      select: { name: analysisResult.consensusBias },
+      select: { name: updates.bias },
     };
   }
 
-  // Optionally update impact if consensus differs
-  if (schema.map.impact && analysisResult.consensusImpact) {
+  if (schema.map.impact && updates.impact) {
     properties[schema.map.impact] = {
-      select: { name: analysisResult.consensusImpact },
+      select: { name: updates.impact },
     };
   }
 
-  // Append consensus summary to details
-  if (schema.map.details && analysisResult.detailsAppend) {
+  const effectiveBias = updates.bias || (currentPage ? getPropertyValue(currentPage, schema.map.bias) : null);
+  const effectiveImpact = updates.impact || (currentPage ? getPropertyValue(currentPage, schema.map.impact) : null);
+  const nextRecommendedAction = updates.recommendedAction || (
+    schema.map.recommendedAction && effectiveBias && effectiveImpact
+      ? deriveRecommendedAction({ bias: effectiveBias, impact: effectiveImpact })
+      : null
+  );
+
+  if (schema.map.recommendedAction && nextRecommendedAction) {
+    properties[schema.map.recommendedAction] = {
+      select: { name: nextRecommendedAction },
+    };
+  }
+
+  if (schema.map.check && Object.prototype.hasOwnProperty.call(updates, 'check')) {
+    properties[schema.map.check] = {
+      select: updates.check ? { name: updates.check } : null,
+    };
+  }
+
+  if (schema.map.url && updates.url) {
+    properties[schema.map.url] = { url: updates.url };
+  }
+
+  if (schema.map.result && Object.prototype.hasOwnProperty.call(updates, 'result')) {
+    const resultText = String(updates.result || '').slice(0, 2000);
+    properties[schema.map.result] = {
+      rich_text: resultText ? [{ text: { content: resultText } }] : [],
+    };
+  }
+
+  if (schema.map.details && updates.details != null) {
+    const detailText = String(updates.details || '').slice(0, 2000);
     properties[schema.map.details] = {
-      rich_text: [{ text: { content: String(analysisResult.detailsAppend).slice(0, 2000) } }],
+      rich_text: detailText ? [{ text: { content: detailText } }] : [],
+    };
+  }
+
+  if (schema.map.status && updates.status) {
+    properties[schema.map.status] = {
+      select: { name: updates.status },
     };
   }
 
   if (Object.keys(properties).length === 0) {
-    throw new Error('No valid Phase 2 properties to update');
-  }
-
-  return notion.pages.update({
-    page_id: pageId,
-    properties,
-  });
-}
-
-async function updateSignalVerification(pageId, verificationResult) {
-  const schema = await getSchema();
-  const properties = {};
-
-  if (schema.map.verificationStatus && verificationResult.verificationStatus) {
-    properties[schema.map.verificationStatus] = {
-      select: { name: verificationResult.verificationStatus },
-    };
-  }
-
-  if (schema.map.priceAtSignal && verificationResult.priceAtSignal != null) {
-    properties[schema.map.priceAtSignal] = {
-      number: verificationResult.priceAtSignal,
-    };
-  }
-
-  if (schema.map.priceChange1D && verificationResult.priceChange1D != null) {
-    // Notion percent format: value 0.0027 displays as 0.27%
-    properties[schema.map.priceChange1D] = {
-      number: verificationResult.priceChange1D / 100,
-    };
-  }
-
-  if (schema.map.priceChange3D && verificationResult.priceChange3D != null) {
-    // Notion percent format: value 0.0027 displays as 0.27%
-    properties[schema.map.priceChange3D] = {
-      number: verificationResult.priceChange3D / 100,
-    };
-  }
-
-  if (schema.map.verificationScore && verificationResult.verificationScore != null) {
-    properties[schema.map.verificationScore] = {
-      number: verificationResult.verificationScore,
-    };
-  }
-
-  if (schema.map.verificationNotes && verificationResult.verificationNotes) {
-    properties[schema.map.verificationNotes] = {
-      rich_text: [{ text: { content: String(verificationResult.verificationNotes).slice(0, 2000) } }],
-    };
-  }
-
-  if (Object.keys(properties).length === 0) {
-    return null; // No verification properties in the database schema
+    throw new Error('No valid lean-schema properties to update');
   }
 
   return notion.pages.update({
@@ -474,9 +481,9 @@ module.exports = {
   DEFAULT_DATABASE_ID,
   addSignal,
   getSignals,
+  isDirectionalSignal,
   updateSignalStatus,
-  updateSignalAnalysis,
-  updateSignalVerification,
+  updateSignalFields,
   getNewSignals,
   getBullishSignals,
   getBearishSignals,

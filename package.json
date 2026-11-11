@@ -1,15 +1,29 @@
 {
   "scripts": {
-    "signals:dry-run": "node .agents/skills/news-trade-analysis/scripts/collect-signals.js --dry-run",
-    "signals:collect": "node .agents/skills/news-trade-analysis/scripts/collect-signals.js --save",
-    "signals:schedule": "node .agents/skills/news-trade-analysis/scripts/run-scheduler.js",
-    "signals:analyze": "node .agents/skills/news-trade-analysis/scripts/analyze-signals.js",
-    "signals:status": "node .agents/skills/news-trade-analysis/scripts/analyze-signals.js --status",
-    "signals:pending": "node .agents/skills/news-trade-analysis/scripts/analyze-signals.js --pending",
-    "signals:verify": "node .agents/skills/news-trade-analysis/scripts/verify-signals.js --all",
-    "signals:verify-dry": "node .agents/skills/news-trade-analysis/scripts/verify-signals.js --dry-run",
-    "signals:verify-report": "node .agents/skills/news-trade-analysis/scripts/verify-signals.js --report",
-    "signals:verify-stats": "node .agents/skills/news-trade-analysis/scripts/verify-signals.js --stats"
+    "signals:dry-run": "node .agents/skills/news-signal-analysis/scripts/collect-signals.js --dry-run",
+    "signals:collect": "node .agents/skills/news-signal-analysis/scripts/collect-signals.js --save",
+    "signals:clear-reminders": "node scripts/clear-past-reminders.js",
+    "signals:clear-reminders-report": "node .agents/skills/notion-reminder-cleanup/scripts/report-last-run.js",
+    "signals:export-brave-cookies": "tmp/pyvenv/bin/python scripts/export-brave-notion-cookies.py",
+    "signals:schedule": "node .agents/skills/news-signal-analysis/scripts/run-scheduler.js",
+    "signals:analyze": "node .agents/skills/news-signal-analysis/scripts/analyze-signals.js",
+    "signals:status": "node .agents/skills/news-signal-analysis/scripts/analyze-signals.js --status",
+    "signals:pending": "node .agents/skills/news-signal-analysis/scripts/analyze-signals.js --pending",
+    "signals:verify": "node .agents/skills/news-signal-validation/scripts/verify-signals.js --all",
+    "signals:verify-dry": "node .agents/skills/news-signal-validation/scripts/verify-signals.js --dry-run",
+    "signals:verify-report": "node .agents/skills/news-signal-validation/scripts/verify-signals.js --report",
+    "signals:verify-stats": "node .agents/skills/news-signal-validation/scripts/verify-signals.js --stats",
+    "signals:reclassify-neutral": "node .agents/skills/news-signal-analysis/scripts/reclassify-neutral.js",
+    "signals:normalize-symbols": "node scripts/normalize-signal-symbols.js",
+    "signals:result": "node .agents/skills/news-signal-validation/scripts/check-result.js --pending",
+    "signals:result-all": "node .agents/skills/news-signal-validation/scripts/check-result.js --all",
+    "signals:rebuild-memory": "node scripts/rebuild-loss-memory.js",
+    "signals:tomorrow": "node .agents/skills/news-signal-analysis/scripts/tomorrow-brief.js",
+    "prices:fetch": "node scripts/fetch-prices.js",
+    "ohlc:fetch": "node scripts/fetch-ohlc.js",
+    "news:future": "node scripts/fetch-future-news.js",
+    "orders:future": "node scripts/fetch-future-orders.js",
+    "orders:analyze-save": "node scripts/analyze-and-save-future-orders.js"
   },
   "dependencies": {
     "@notionhq/client": "^5.9.0",
@@ -18,7 +32,11 @@
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^17.3.1",
+    "groq-sdk": "^0.37.0",
     "node-schedule": "^2.1.1",
     "rss-parser": "^3.13.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.2"
   }
 }

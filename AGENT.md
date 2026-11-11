@@ -21,7 +21,8 @@ npm run signals:verify
 | `npm run signals:collect` | Collect & save signals to Notion | ❌ |
 | `npm run signals:verify` | Verify signals with real prices | ❌ |
 | `npm run signals:verify-report` | Accuracy report | ❌ |
-| `npm run signals:status` | Show analysis status | ❌ |
+| `npm run signals:status` | Show signal inventory summary | ❌ |
+| `npm run signals:result` | Prefetch OHLC, then write `Check`/`Result` | ❌ |
 
 ## Environment Variables
 
@@ -33,9 +34,15 @@ TAVILY_API_KEY=your_key
 
 ## What It Does
 
-1. **Phase 1**: Fetches financial news → generates trading signals → saves to Notion
-2. **Phase 2** (optional): AI analysis with Ollama
-3. **Phase 3**: Verifies signals against real forex prices
+The project is now being split conceptually into two agent skills:
+
+1. **News Signal Analysis**: Fetches financial news/calendar items, maps them to symbols, and assigns a long/short bias via `Bias`
+2. **News Signal Validation**: Checks historical calls by fetching symbol price data and comparing the post-news move to the original bias
+
+Workflow layers currently live under the split skill folders:
+- signal collection
+- optional AI consensus analysis
+- historical validation / intraday result checks
 
 ## For Agents
 
