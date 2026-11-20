@@ -1,0 +1,285 @@
+/* ── App shell ─────────────────────────────────────────────────────── */
+.app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: clamp(300px, 27vw, 390px) minmax(0, 1fr) clamp(320px, 29vw, 430px);
+  gap: 10px;
+  padding: 10px;
+}
+
+/* Panel: same bordered / inset-glow card as the NewsTrade `wm-panel`. */
+.panel {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--surface);
+  background-image: var(--noise-img);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--border-bright) 35%, transparent),
+    inset 0 0 16px color-mix(in srgb, var(--accent) 6%, transparent),
+    inset 0 -12px 20px -16px color-mix(in srgb, var(--accent) 16%, transparent),
+    0 0 10px -10px color-mix(in srgb, var(--accent) 28%, transparent);
+  transition: border-color 0.15s, box-shadow 0.2s;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.2;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--accent) 14%, transparent) 0, transparent 16%, transparent 84%, color-mix(in srgb, var(--accent) 14%, transparent) 100%),
+    linear-gradient(180deg, transparent 58%, color-mix(in srgb, var(--accent) 12%, transparent) 100%);
+}
+
+.panel:hover {
+  border-color: var(--border-bright);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+    inset 0 0 20px color-mix(in srgb, var(--accent) 11%, transparent),
+    inset 0 -16px 24px -18px color-mix(in srgb, var(--accent) 24%, transparent),
+    0 0 14px -8px color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
+.panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  position: relative;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.dot-sep {
+  color: var(--text-dim);
+}
+
+/* ── Header ────────────────────────────────────────────────────────── */
+.app-header {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1000;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--surface-header);
+  background-image: linear-gradient(90deg, transparent, var(--accent-glow), transparent), var(--noise-img);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
+}
+
+.app-header-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--sans);
+  font-size: var(--fs-xl);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+
+.app-brand-mark {
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  letter-spacing: -2px;
+}
+
+.symbol-select {
+  flex: none;
+  width: 124px;
+}
+
+.quote-strip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 6px;
+  overflow: hidden;
+  padding-bottom: 2px;
+}
+
+.quote-empty {
+  align-self: center;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.last-ingest {
+  white-space: nowrap;
+}
+
+/* Latte (light) header: the accent-coloured label is faint on the cream bar, so use the body text token there. Dark themes keep the accent. */
+:root[data-theme='latte'] .status .ingest-btn {
+  color: var(--text-primary);
+}
+
+/* ── Settings dropdown ─────────────────────────────────────────────── */
+.app-settings {
+  position: relative;
+  flex: none;
+}
+
+.app-settings-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  display: none;
+  min-width: 260px;
+  padding: 10px;
+  border: 1px solid var(--border-bright);
+  background-color: var(--surface-strong);
+  background-image: var(--noise-img);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
+  box-shadow: 0 0 14px var(--accent-glow), 0 14px 28px var(--shadow-pop);
+  z-index: 1200;
+}
+
+.app-settings-panel.is-open {
+  display: grid;
+  gap: 10px;
+}
+
+.app-setting-row {
+  display: grid;
+  gap: 6px;
+}
+
+.app-setting-label {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.app-font-size-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+/* ── Responsive ────────────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .status .model-tag,
+  .status .last-ingest {
+    display: none;
+  }
+}
+
+@media (max-width: 1080px) {
+  .app {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .app-header-inner {
+    flex-wrap: wrap;
+  }
+
+  .quote-strip {
+    order: 5;
+    flex-basis: 100%;
+    overflow-x: auto;
+  }
+
+  .status {
+    margin-left: auto;
+  }
+
+  .grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .center-col {
+    order: 1;
+    height: 580px;
+    flex: none;
+  }
+
+  .news-col {
+    order: 2;
+    height: 620px;
+    flex: none;
+  }
+
+  .side-col {
+    order: 3;
+    flex: none;
+  }
+
+  .advice-col {
+    flex: none;
+    max-height: none;
+  }
+
+  .advice-col .advice-feed {
+    overflow: visible;
+  }
+
+  .side-col .ta-stack {
+    max-height: 640px;
+  }
+}
+
+@media (max-width: 560px) {
+  .app-brand-text {
+    display: none;
+  }
+
+  .center-col {
+    height: 520px;
+  }
+
+  .status .pill:not(.on):not(.off) {
+    display: none;
+  }
+
+  .app-settings-panel {
+    min-width: 220px;
+  }
+}

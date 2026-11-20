@@ -1,0 +1,57 @@
+# LLM settings of the backend (app/llm). Copy this file to backend/llm.yaml (never committed: it holds the keys).
+# Only the backend reads it. The backtest / LLM Lab just picks a provider:model (e.g. openrouter:google/gemini-2.5-flash);
+# the model and thinking level of each provider are set here.
+
+default_provider: "openrouter"  # used when the caller names no provider (claude_code | groq | hive | openrouter)
+timeout: 120                   # seconds per request
+max_retries: 2                 # retries of a request on 429 / 5xx / network errors
+max_image_mb: 10               # largest image accepted
+
+providers:
+  openrouter:
+    model: "openrouter/free"   # default model; openrouter/free picks a free one (a vision one for images)
+    thinking: "off"            # "off" (fast) | "low" | "medium" | "high" | "" = the model's default
+    rotation: "failover"       # failover: first working key, the next one when it runs out | round_robin: keys in turn
+    api_keys:                  # one or more keys, tried in this order
+      - name: "main"
+        key: "sk-or-v1-..."
+      - name: "backup"
+        key: "sk-or-v1-..."
+    # A key is skipped for a while when OpenRouter refuses it: 401 invalid or expired (1 h), 402 out of
+    # credits (1 h), daily free limit (until it resets). It is used again automatically afterwards.
+    # base_url: https://openrouter.ai/api/v1
+    # app_name: fxnews         # shown on openrouter.ai rankings
+
+  hive:                        # Hive (thehive.ai), OpenAI-compatible; keys: Hive dashboard -> Service API Keys
+    model: "deepseek-ai/deepseek-v4.1-flash-1017"  # deepseek-ai/deepseek-v4.1-flash-1017 | zai-org/glm-5.3-flash | hive/vision-language-model
+    rotation: "failover"       # failover | round_robin (spreads the 5 requests/s limit over the keys)
+    api_keys:                  # one or more secret keys, tried in this order
+      - name: "main"
+        key: "hive-secret-..."
+    # A key is skipped for a while when Hive refuses it: 401/403 invalid (1 h), 405 organization out of
+    # balance (1 h), 429 rate limit (a few seconds, only when another key can answer).
+    # base_url: https://api.thehive.ai/api/v3   # or https://api-va1.thehive.ai/api/v3 (Virginia)
+
+  groq:                        # Groq (groq.com), OpenAI-compatible; keys: console.groq.com -> API Keys
+    model: "llama-3.3-70b-versatile"  # llama-3.3-70b-versatile | llama-3.1-8b-instant | openai/gpt-oss-120b | ...
+    thinking: ""               # "low" | "medium" | "high" (reasoning_effort, gpt-oss models) | "" = the model's default
+    rotation: "failover"       # failover | round_robin (spreads per-minute limits over the keys)
+    api_keys:                  # one or more keys, tried in this order
+      - name: "main"
+        key: "gsk_..."
+      - name: "backup"
+        key: "gsk_..."
+    # A key is skipped for a while when Groq refuses it: 401/403 invalid (1 h), 429 daily limit (until
+    # Groq's retry-after), 429 per-minute limit (retry-after, only when another key can answer).
+    # base_url: https://api.groq.com/openai/v1
+
+  claude_code:                 # Claude Code CLI (`claude -p`) with this machine's Claude login: no key
+    model: "claude-haiku-5-5"  # claude-haiku-5-5 | claude-sonnet-5-5 | claude-opus-5-5 | claude-fable-5-2
+    thinking: "low"            # "low" | "medium" | "high" | "xhigh" | "max" | "" = the model's default
+    # bin: claude              # path of the CLI (~/.local/bin/claude is also tried)
+
+  opencode:                    # OpenCode CLI (`opencode run`) with this machine's opencode models: no key
+    model: "opencode/beam-free"  # provider/model as opencode writes it; --model opencode/beam-free#high
+    thinking: "high"           # the model's #variant: "low" | "medium" | "high" | ... | "" / "off" = none
+    # isolated: true           # false = also load this machine's opencode plugins / MCP / skills / AGENTS.md
+    # bin: opencode            # path of the CLI (~/.bun/bin/opencode is also tried)

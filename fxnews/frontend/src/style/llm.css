@@ -1,0 +1,587 @@
+/* LLM Lab page: one full-height chat panel. Colours come only from theme tokens (see global.css); corners are square. */
+.llm-page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px 14px;
+}
+
+.llm-chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  background-image: var(--noise-img);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+/* ── Header ── */
+.llm-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-header);
+}
+
+.llm-head-text {
+  min-width: 0;
+}
+
+.llm-title {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.llm-subtitle {
+  margin: 3px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+/* ── Buttons ── */
+.llm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border-bright);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+}
+
+.llm-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.llm-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.llm-btn:focus-visible,
+.llm-example:focus-visible,
+.llm-system-row:focus-visible,
+.llm-link:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.llm-clear {
+  flex: none;
+}
+
+.llm-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── Settings row ── */
+.llm-settings {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.llm-field {
+  flex: 1 1 180px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.llm-label {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.llm-page .llm-select .ui-selectbox-trigger {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+/* ── System prompt ── */
+.llm-system {
+  flex: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.llm-system-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.llm-system-row:hover .llm-label {
+  color: var(--text-secondary);
+}
+
+.llm-chevron {
+  flex: none;
+  width: 10px;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  transition: transform 0.15s;
+}
+
+.llm-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.llm-system-value {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.llm-system-input,
+.llm-input {
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: var(--mono);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  resize: none;
+  color-scheme: dark;
+}
+
+.llm-system-input {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 0 14px 10px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
+.llm-system-input:focus,
+.llm-input:focus {
+  outline: none;
+  border-color: var(--accent-dim);
+}
+
+.llm-input::placeholder,
+.llm-system-input::placeholder {
+  color: var(--text-dim);
+}
+
+/* ── Messages ── */
+.llm-messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.llm-empty {
+  width: 100%;
+  max-width: 560px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+
+.llm-empty-title {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: calc(22px + var(--font-size-offset));
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.llm-empty-text {
+  margin: 0 0 6px;
+  font-size: var(--fs-md);
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.llm-wide {
+  width: 100%;
+  padding: 9px 12px;
+  font-size: var(--fs-md);
+}
+
+.llm-examples {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.llm-example {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  text-align: center;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.llm-example:hover {
+  color: var(--text-secondary);
+}
+
+.llm-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.llm-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.llm-msg-user {
+  align-items: flex-end;
+}
+
+.llm-bubble {
+  max-width: min(80%, 640px);
+  padding: 8px 12px;
+  border: 1px solid var(--accent-dim);
+  background: var(--accent-glow);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.llm-msg-images {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.llm-msg-images img {
+  max-width: 160px;
+  max-height: 120px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+}
+
+.llm-msg-assistant {
+  align-items: flex-start;
+  max-width: 100%;
+}
+
+.llm-text {
+  max-width: min(100%, 760px);
+  color: var(--text-primary);
+  font-size: var(--fs-base);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.llm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.llm-reasoning summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.llm-reasoning summary::-webkit-details-marker {
+  display: none;
+}
+
+.llm-reasoning summary::before {
+  content: '› ';
+}
+
+.llm-reasoning[open] summary::before {
+  content: '⌄ ';
+}
+
+.llm-reasoning summary:hover {
+  color: var(--text-secondary);
+}
+
+.llm-reasoning pre {
+  margin: 6px 0 0;
+  max-width: min(100%, 760px);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* waiting indicator */
+.llm-dots {
+  display: inline-flex;
+  gap: 5px;
+  padding: 6px 0;
+}
+
+.llm-dots i {
+  width: 6px;
+  height: 6px;
+  background: var(--text-dim);
+  animation: llm-blink 1.2s infinite ease-in-out;
+}
+
+.llm-dots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.llm-dots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes llm-blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .llm-dots i {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
+.llm-note {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 10px 14px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  font-size: var(--fs-sm);
+}
+
+.llm-messages > .llm-note,
+.llm-thread + .llm-note {
+  margin: 12px 0 0;
+}
+
+.llm-note-error {
+  border-color: var(--red-soft);
+  background: var(--red-muted);
+  color: var(--red);
+}
+
+.llm-note-error .llm-link {
+  color: inherit;
+}
+
+/* ── Composer ── */
+.llm-composer {
+  flex: none;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-header);
+}
+
+.llm-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.llm-thumb {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--border);
+}
+
+.llm-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.llm-thumb button {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-bright);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.llm-thumb button:hover {
+  color: var(--red);
+  border-color: var(--red);
+}
+
+.llm-composer-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.llm-icon-btn {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+}
+
+.llm-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 34px;
+  max-height: 200px;
+  padding: 7px 10px;
+}
+
+.llm-send {
+  flex: none;
+  height: 34px;
+  letter-spacing: 0.14em;
+  border-color: var(--accent-dim);
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .llm-page {
+    padding: 6px;
+  }
+
+  .llm-bubble {
+    max-width: 92%;
+  }
+}
+
+/* ── Recent models ── */
+.llm-recent {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.llm-recent .llm-label {
+  margin-right: 4px;
+}
+
+.llm-recent-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background-color 0.15s;
+}
+
+.llm-recent-chip:hover {
+  border-color: var(--border-bright);
+  color: var(--text-primary);
+}
+
+.llm-recent-chip.on {
+  border-color: var(--accent-dim);
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.llm-recent-provider {
+  color: var(--text-dim);
+}
+
+.llm-recent-clear {
+  padding: 0 6px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.llm-recent-clear:hover {
+  color: var(--red);
+}

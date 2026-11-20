@@ -1,0 +1,196 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Relief:wght@400;700&family=Fira+Code:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Space+Mono:wght@400;700&family=Winky+Sans:wght@300;400;500;600;700&display=swap');
+@import 'tailwindcss';
+@import './layout.css';
+@import './app.css';
+@import './reaction.css';
+
+/*
+ * Design tokens. The values below are the default ("Blue") theme; `applyTheme()` (config/theme-config.ts)
+ * overrides them inline on <html> when another theme is selected, so everything derived from them
+ * with color-mix() follows the active theme automatically.
+ */
+:root {
+  --bg-base: #080c10;
+  --bg-card: #0b1017;
+  --bg-card-hover: #0f1620;
+  --border: #1e3448;
+  --border-bright: #2a4a6b;
+  --accent: #4a9eff;
+  --accent-dim: #1a4a7a;
+  --accent-glow: rgba(74, 158, 255, 0.15);
+  --text-primary: #d6e3f0;
+  --text-secondary: #93b0c0;
+  --text-dim: #6f8d9e;
+  --mono: 'Geist Mono', 'Share Tech Mono', monospace;
+  --sans: 'Rajdhani', sans-serif;
+  --green: #2aff8a;
+  --red: #ff4a4a;
+  --yellow: #ffcc44;
+  --orange: #ff9a3c;
+  --bg-radial-1: rgba(10, 30, 60, 0.4);
+  --bg-radial-2: rgba(5, 20, 40, 0.3);
+  --green-soft: rgba(42, 255, 138, 0.3);
+  --red-soft: rgba(255, 74, 74, 0.3);
+  --red-muted: rgba(255, 74, 74, 0.1);
+  --red-shadow: rgba(255, 74, 74, 0.2);
+  --table-border-soft: rgba(30, 52, 72, 0.5);
+  --table-row-hover: rgba(74, 158, 255, 0.03);
+  --header-overlay-from: rgba(8, 12, 16, 0.95);
+  --header-overlay-to: rgba(8, 12, 16, 0.82);
+  --font-size-offset: 0px;
+  --scrollbar-size: 8px;
+  --scrollbar-track: color-mix(in srgb, var(--bg-base) 92%, transparent);
+  --scrollbar-thumb: color-mix(in srgb, var(--accent) 34%, var(--text-secondary) 66%);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--accent) 55%, var(--text-secondary) 45%);
+
+  /* Derived (not part of the theme config): tinted backgrounds and surfaces that adapt to any theme. */
+  --bg-input: color-mix(in srgb, var(--bg-card) 65%, var(--bg-base));
+  --bg-raised: color-mix(in srgb, var(--bg-card) 55%, var(--bg-card-hover));
+  --bg-overlay: color-mix(in srgb, var(--bg-card) 95%, transparent);
+  --tint: color-mix(in srgb, var(--text-primary) 6%, transparent);
+  --green-bg: color-mix(in srgb, var(--green) 14%, transparent);
+  --red-bg: color-mix(in srgb, var(--red) 14%, transparent);
+  --yellow-bg: color-mix(in srgb, var(--yellow) 14%, transparent);
+  --orange-bg: color-mix(in srgb, var(--orange) 14%, transparent);
+  --shadow-pop: color-mix(in srgb, var(--bg-base) 70%, #000);
+  --panel-head-bg: color-mix(in srgb, var(--bg-base) 62%, transparent);
+
+  /*
+   * Matte / frosted glass ("nhám"): mostly-opaque tinted surfaces + backdrop blur + a fine grain.
+   * Everything is derived from --bg-card / --bg-base, so it follows every theme in theme-config.ts.
+   */
+  --surface: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  --surface-strong: color-mix(in srgb, var(--bg-card) 96%, transparent);
+  --surface-header: color-mix(in srgb, var(--bg-base) 90%, transparent);
+  --glass-blur: blur(16px) saturate(140%);
+  --glass-blur-strong: blur(20px) saturate(160%);
+  /* Monochrome fractal-noise tile (alpha baked in at 0.10): speckles darken light themes and lighten dark ones. */
+  --noise-img: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25' color-interpolation-filters='sRGB'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1.6 0 0 0 -.3 1.6 0 0 0 -.3 1.6 0 0 0 -.3 0 0 0 0 .1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* Font scale: follows the Small / Medium / Large setting through --font-size-offset. */
+  --fs-2xs: calc(9px + var(--font-size-offset));
+  --fs-xs: calc(10px + var(--font-size-offset));
+  --fs-sm: calc(11px + var(--font-size-offset));
+  --fs-md: calc(12px + var(--font-size-offset));
+  --fs-base: calc(13px + var(--font-size-offset));
+  --fs-lg: calc(14px + var(--font-size-offset));
+  --fs-xl: calc(16px + var(--font-size-offset));
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    font-family: var(--mono);
+    font-size: var(--fs-base);
+    line-height: 1.45;
+    background: var(--bg-base);
+    color: var(--text-primary);
+    background-image:
+      radial-gradient(ellipse at 20% 50%, var(--bg-radial-1) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, var(--bg-radial-2) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 100%, color-mix(in srgb, var(--accent) 9%, transparent) 0%, transparent 55%);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+
+  button {
+    cursor: pointer;
+    text-align: left;
+  }
+
+  button:disabled {
+    cursor: default;
+  }
+
+  a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+
+  :focus-visible {
+    outline: 1px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Grain over the page background (sits above the canvas, below all content). */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image: var(--noise-img);
+}
+
+/* CRT scanline overlay, kept very faint so it never hurts readability. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.016) 2px, rgba(0, 0, 0, 0.016) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

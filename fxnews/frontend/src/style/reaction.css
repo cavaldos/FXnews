@@ -1,0 +1,187 @@
+/* ── Market reaction (table column, check panel) ───────────────────── */
+.rx-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.rx-label b {
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.rx-label.up {
+  color: var(--green);
+}
+
+.rx-label.down {
+  color: var(--red);
+}
+
+.rx-label.sideways {
+  color: var(--yellow);
+}
+
+.rx-label.dim {
+  color: var(--text-dim);
+}
+
+.rx-pct {
+  opacity: 0.85;
+}
+
+.ct-rx {
+  white-space: nowrap;
+}
+
+.ct-rx-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rx-sym {
+  max-width: 78px;
+  padding: 1px 2px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  outline: none;
+}
+
+.rx-sym:hover,
+.rx-sym:focus {
+  border-color: var(--accent);
+}
+
+.ct-act {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.rx-check {
+  padding: 1px 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.rx-check:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.cal-rx {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cal-rx .cal-seg button {
+  padding: 4px 8px;
+}
+
+.rx-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  overflow: auto;
+  color: var(--text-secondary);
+  font-size: var(--fs-md);
+}
+
+.rx-when {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+.rx-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.rx-table th,
+.rx-table td {
+  padding: 5px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.rx-table th {
+  color: var(--text-dim);
+  font-weight: 500;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rx-table tbody th {
+  text-transform: none;
+}
+
+.rx-table tr.sep td,
+.rx-table tr.sep th {
+  border-top: 1px solid var(--border-bright);
+}
+
+.rx-note {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+.rx-form {
+  padding: 14px 14px 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.rx-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rx-form select,
+.rx-form input {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  color-scheme: dark;
+  font-family: var(--sans);
+  font-size: var(--fs-md);
+  outline: none;
+}
+
+.rx-form select:focus,
+.rx-form input:focus {
+  border-color: var(--accent);
+}
+
+.rx-table td.rx-note {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
