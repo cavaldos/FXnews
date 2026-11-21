@@ -151,6 +151,17 @@
   white-space: nowrap;
 }
 
+.trading-clock {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.trading-clock-tz {
+  color: var(--text-dim);
+  font-size: var(--fs-xs, 0.85em);
+}
+
 /* Latte (light) header: the accent-coloured label is faint on the cream bar, so use the body text token there. Dark themes keep the accent. */
 :root[data-theme='latte'] .status .ingest-btn {
   color: var(--text-primary);

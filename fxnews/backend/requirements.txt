@@ -13,3 +13,4 @@ tzdata>=2024.1
 websockets>=13
 selectolax>=1.0
 pyyaml>=6.0
+graphiti-core>=0.31

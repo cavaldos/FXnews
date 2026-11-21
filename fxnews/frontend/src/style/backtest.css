@@ -1014,3 +1014,144 @@
 .bt-rchip-prov {
   color: var(--text-dim);
 }
+
+/* ── AI predict cell: chips for every model + Predict menu ── */
+.bt-table td.bt-predict {
+  min-width: 180px;
+  max-width: 360px;
+  white-space: normal;
+}
+
+.bt-predict-in {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.bt-chips {
+  flex-wrap: wrap;
+  row-gap: 3px;
+}
+
+.bt-mchip-dir {
+  font-variant-numeric: tabular-nums;
+}
+
+.bt-mchip.running {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  border-style: dashed;
+}
+
+.bt-mchip-spin {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--accent-dim);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: bt-spin 0.8s linear infinite;
+}
+
+@keyframes bt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.bt-mini.open {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.bt-mini.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--bg-base);
+}
+
+.bt-mini.primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+  background: var(--accent);
+}
+
+.bt-mini.primary:disabled {
+  background: transparent;
+}
+
+.bt-pmenu {
+  position: fixed;
+  z-index: 1400;
+  width: 280px;
+  max-height: 60vh;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--border-strong, var(--border));
+  background: var(--bg-card);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 35%);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.bt-pmenu-head {
+  margin-bottom: 6px;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.bt-pmenu-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bt-pmenu-list label,
+.bt-pmenu-force {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  cursor: pointer;
+}
+
+.bt-pmenu-list label:hover {
+  background: var(--accent-glow);
+}
+
+.bt-pmenu-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bt-pmenu-list small {
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+}
+
+.bt-pmenu-done {
+  margin-left: auto;
+  color: var(--green) !important;
+}
+
+.bt-pmenu-empty,
+.bt-pmenu-note {
+  padding: 4px;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+}
+
+.bt-pmenu-force {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+}
+
+.bt-pmenu-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 6px;
+}

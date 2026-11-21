@@ -138,7 +138,42 @@ npm run dev                 # http://localhost:5173 (proxy /api → :8000)
   headline được tự phân tích mỗi 10 phút), `MAX_HEADLINE_ANALYSES_PER_CYCLE` và ngân sách
   `MAX_AUTO_LLM_CALLS_PER_HOUR` (mặc định 20, đếm cả pre-event).
 
-## 6. Tận dụng từ dự án cũ
+## 6. Bộ nhớ dài hạn (Graphiti) — `backend/app/memory/`
+
+Lưu **sự thật đã quan sát** để LLM truy xuất ở các lần dự đoán sau: mỗi cặp (sự kiện, symbol) có kết quả
+cuối cùng (`bt_outcomes.complete`) thành một fact `MARKET_REACTION` trong graph của symbol đó (`group_id = fx_<SYMBOL>`).
+
+| Lưu | Không bao giờ lưu |
+|---|---|
+| symbol, tiêu đề, giờ, impact, kind, currency/country, actual / forecast / previous, actual − forecast | `bt_predictions`, `analyses`, `signals`, `news_items.rule_bias` |
+| giá lúc ra tin, return + nhãn up/down/flat ở 5m/15m/1h/4h/1d, biên độ giờ đầu | `bt_events.raw`, summary bài báo (trừ khi `MEMORY_INCLUDE_SUMMARY=true`) |
+
+- Ghi **tất định**, không qua LLM: không dùng `add_episode`/`add_triplet` của Graphiti (hai hàm đó gọi LLM để
+  trích xuất và *vô hiệu hoá* fact cũ). Graphiti nhận một LLM client từ chối mọi lời gọi.
+- Văn bản sinh ra bị kiểm tra từ khoá ý kiến (`bullish`, `likely`, `confidence`…); có thì bỏ fact đó.
+- uuid tất định → sync lại chỉ ghi đè, không nhân bản. Fact lịch sử không bao giờ bị đánh dấu hết hiệu lực.
+- `recall(..., as_of=T)` chỉ trả fact đã biết đủ tại T (sự kiện ≤ T − 1 ngày) → backtest không nhìn thấy tương lai.
+
+```bash
+cd backend
+pip install -r requirements.txt
+NEO4J_PASSWORD=change-me docker compose -f docker-compose.memory.yml up -d   # MEMORY_NEO4J_PASSWORD=change-me trong .env
+python -m app.memory init                                   # tạo index (1 lần)
+python -m app.memory sync --from 2026-01-01 --graph         # outcome đã hoàn tất -> SQLite + graph (chạy lại được)
+python -m app.memory recall "Non-Farm Payrolls" --symbol EURUSD --as-of 2026-11-07T13:30
+```
+
+Trong code: `MemoryStore().recall(title, symbol, as_of=release_time)` rồi `format_for_prompt(facts)` để chèn vào prompt.
+
+**Nơi lưu:** nguồn chính là SQLite (`memory_nodes`, `memory_edges`, `memory_sync`), nên tab **Memory** và trang
+**Data** (export/import) chạy được mà không cần Neo4j. Graphiti/Neo4j là bản sao để tìm kiếm ngữ nghĩa:
+`python -m app.memory sync --graph` hoặc, sau khi import, `python -m app.memory push-graph`.
+
+**Tab Memory:** graph theo từng symbol (symbol ở giữa, indicator màu xanh dương gom các lần công bố, mỗi sự kiện tô
+màu theo hướng giá ở horizon đã chọn, kích thước theo độ lớn biến động). Lọc theo text / loại tin / hướng, nút
+*Sync outcomes* (`POST /api/memory/sync`). API: `GET /api/memory/overview`, `GET /api/memory/graph?symbol=EURUSD`.
+
+## 7. Tận dụng từ dự án cũ
 
 | Cũ (Node) | Mới (Python) |
 |---|---|

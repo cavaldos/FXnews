@@ -1,0 +1,16 @@
+# Neo4j for the long-term memory graph (app/memory). Data persists in the named volume.
+#   NEO4J_PASSWORD=change-me docker compose -f docker-compose.memory.yml up -d
+# then set MEMORY_NEO4J_PASSWORD to the same value in .env
+services:
+  neo4j:
+    image: neo4j:5.26
+    ports:
+      - "127.0.0.1:7474:7474"   # browser UI
+      - "127.0.0.1:7687:7687"   # bolt
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?set NEO4J_PASSWORD}
+    volumes:
+      - fxnews_memory:/data
+    restart: unless-stopped
+volumes:
+  fxnews_memory:

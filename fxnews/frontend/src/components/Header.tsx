@@ -2,7 +2,8 @@ import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import type { HealthOut, QuoteOut, SymbolOut } from '../api/types'
 import type { StreamStatus } from '../hooks/useEventStream'
 import { PAGES, type Page } from '../lib/pages'
-import { fmtPct, fmtPrice, shortModel } from '../lib/format'
+import { fmtPct, fmtPrice } from '../lib/format'
+import { useNowFast } from '../hooks/useClock'
 import { SettingsMenu } from './SettingsMenu'
 import { SymbolLink } from './SymbolLink'
 import { UiButton } from './UI/UiButton'
@@ -32,6 +33,26 @@ interface Props {
   onIngest: () => void
   page: Page
   onPage: (page: Page) => void
+}
+
+/** Trading session timezone shown in the header clock (the market's reference clock; UTC). */
+export const TRADING_TZ = 'UTC'
+const tradingClockFmt = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TRADING_TZ,
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+})
+
+/** Clock in the trading timezone (not the viewer's local time). */
+function TradingClock() {
+  const now = useNowFast()
+  return (
+    <span className="trading-clock" title={`Trading time (${TRADING_TZ})`}>
+      {tradingClockFmt.format(now)} <span className="trading-clock-tz">{TRADING_TZ}</span>
+    </span>
+  )
 }
 
 /** Header quote chip: the price cell flashes green / red whenever a refresh moves it. */
@@ -153,18 +174,8 @@ export function Header({ symbols, symbol, onSymbol, quotes, quotesError, health,
         </div>
 
         <div className="status">
-          {healthError ? (
-            <Pill on={false} label="Backend offline" title={healthError.message} />
-          ) : (
-            <>
-              <Pill on={health?.llm_enabled ?? false} label="LLM" title={health?.llm_enabled ? 'OpenRouter enabled' : 'OPENROUTER_API_KEY not configured'} />
-              {health?.default_model ? (
-                <span className="model-tag" title={`Default model: ${health.default_model}`}>
-                  {shortModel(health.default_model)}
-                </span>
-              ) : null}
-            </>
-          )}
+          <TradingClock />
+          {healthError ? <Pill on={false} label="Backend offline" title={healthError.message} /> : null}
           <Pill
             on={stream === 'open'}
             label={stream === 'open' ? 'Live' : stream === 'connecting' ? 'Connecting…' : 'Disconnected'}

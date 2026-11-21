@@ -71,13 +71,15 @@ interface Props {
   loading: boolean
   horizon: Horizon
   picked: string[]
+  /** Recently used models, offered in each row's Predict menu. */
+  recent: string[]
   actions: RowActions
   onOpenPrice: (id: number) => void
   onOpenPredict: (id: number) => void
 }
 
 /** One row per event, styled like the Calendar table (ct-* classes), plus Source / Verify history / AI predict columns. */
-export function BacktestTable({ events, resetKey, loading, horizon, picked, actions, onOpenPrice, onOpenPredict }: Props) {
+export function BacktestTable({ events, resetKey, loading, horizon, picked, recent, actions, onOpenPrice, onOpenPredict }: Props) {
   const [sortRaw, setSortRaw] = useStoredString('fxnews.bt.sort', 'time:desc')
   const { key: sortKey, dir } = parseSort(sortRaw)
   const now = useNowSlow()
@@ -165,7 +167,7 @@ export function BacktestTable({ events, resetKey, loading, horizon, picked, acti
                 <td className="num">{cal && e.forecast ? e.forecast : <span className="dim">—</span>}</td>
                 <td className="num">{cal && e.previous ? e.previous : <span className="dim">—</span>}</td>
                 <VerifyCell event={e} released={released} horizon={horizon} state={state} onVerify={() => void actions.verify(e.id)} onOpen={() => onOpenPrice(e.id)} />
-                <PredictCell event={e} horizon={horizon} picked={picked} state={state} onPredict={() => void actions.predict(e.id, picked)} onOpen={() => onOpenPredict(e.id)} />
+                <PredictCell event={e} horizon={horizon} picked={picked} recent={recent} state={state} onPredict={(models, force) => void actions.predict(e.id, models, force)} onOpen={() => onOpenPredict(e.id)} />
               </tr>
             )
           })}

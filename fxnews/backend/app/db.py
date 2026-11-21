@@ -64,6 +64,7 @@ SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 def init_db() -> None:
     from app import models  # noqa: F401  (register tables)
     from app.backtest import models as _backtest_models  # noqa: F401
+    from app.memory import models as _memory_models  # noqa: F401
 
     Base.metadata.create_all(engine)
 

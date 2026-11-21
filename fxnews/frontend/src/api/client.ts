@@ -67,7 +67,7 @@ function errorMessage(status: number, statusText: string, text: string): string 
   return `${status} ${statusText}`.trim()
 }
 
-async function request<T>(method: 'GET' | 'POST', path: string, opts: RequestOptions = {}): Promise<T> {
+export async function request<T>(method: 'GET' | 'POST', path: string, opts: RequestOptions = {}): Promise<T> {
   const hasBody = opts.body !== undefined
   let res: Response
   try {

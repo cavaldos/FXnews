@@ -1,10 +1,11 @@
-export type Page = 'dashboard' | 'calendar' | 'backtest' | 'llm' | 'data'
+export type Page = 'dashboard' | 'calendar' | 'backtest' | 'llm' | 'memory' | 'data'
 
 export const PAGES: { id: Page; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'backtest', label: 'Backtest' },
   { id: 'llm', label: 'LLM Lab' },
+  { id: 'memory', label: 'Memory' },
   { id: 'data', label: 'Data' },
 ]
 

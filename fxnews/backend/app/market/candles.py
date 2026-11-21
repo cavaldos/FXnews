@@ -81,7 +81,7 @@ _BACKOFF_MAX_S = 10.0  # also caps Retry-After so an API request never hangs for
 MAX_CONCURRENT_REQUESTS = 6
 _CACHE_MAX_ENTRIES = 256
 # The header polls ~8 quotes; each is one Yahoo chart call, so keep this >= 60s to stay under Yahoo's limit.
-QUOTE_TTL_S = 60.0
+QUOTE_TTL_S = 3.0
 STALE_MAX_AGE_S = 6 * 3600.0  # how long past its TTL a last-good entry may still be served on errors
 # After Yahoo exhausted its retries on 429 / 5xx, leave it alone for this long.
 YAHOO_COOLDOWN_429_S = 180.0
@@ -97,17 +97,17 @@ TV_429_MAX_S = 300.0
 _tv_429_streak = 0  # consecutive 429 handshakes since the last successful TradingView session
 # Twelve Data's free plan is ~8 credits/min and 800/day: cache its answers a little longer.
 TWELVEDATA_MIN_CANDLE_TTL_S = 120.0
-TWELVEDATA_QUOTE_TTL_S = 60.0
+TWELVEDATA_QUOTE_TTL_S = 3.0
 
 # interval -> (yahoo interval, default range, max lookback in days or None, cache TTL seconds)
 _INTERVAL_CFG: dict[str, tuple[str, str, int | None, float]] = {
-    "1m": ("1m", "1d", 7, 20.0),
-    "5m": ("5m", "5d", 60, 20.0),
-    "15m": ("15m", "5d", 60, 60.0),
-    "30m": ("30m", "1mo", 60, 60.0),
-    "1h": ("60m", "1mo", 730, 300.0),
-    "4h": ("60m", "3mo", 730, 300.0),  # Yahoo has no 4h: fetch 60m and resample
-    "1d": ("1d", "1y", None, 300.0),
+    "1m": ("1m", "1d", 7, 3.0),
+    "5m": ("5m", "5d", 60, 3.0),
+    "15m": ("15m", "5d", 60, 5.0),
+    "30m": ("30m", "1mo", 60, 5.0),
+    "1h": ("60m", "1mo", 730, 5.0),
+    "4h": ("60m", "3mo", 730, 5.0),  # Yahoo has no 4h: fetch 60m and resample
+    "1d": ("1d", "1y", None, 5.0),
 }
 SUPPORTED_INTERVALS = tuple(_INTERVAL_CFG)
 _RESAMPLE_SECONDS = {"4h": 4 * 3600}

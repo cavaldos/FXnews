@@ -241,6 +241,7 @@ export function BacktestPage() {
           loading={events.loading}
           horizon={horizon}
           picked={picked}
+          recent={recent}
           actions={actions}
           onOpenPrice={setPriceId}
           onOpenPredict={setPredictId}

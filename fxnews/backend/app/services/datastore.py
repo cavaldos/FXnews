@@ -90,6 +90,11 @@ SPECS: tuple[TableSpec, ...] = (  # parents first
     TableSpec("bt_predictions", "Backtest predictions", refs={"event_id": "bt_events"},
               key_cols=("event_id", "symbol", "model"), ts_col="created_at",
               parent_filter=("event_id", "bt_events", "time")),
+    # Long-term memory (app/memory): observed facts only. Nodes / edges are keyed by deterministic uuids.
+    TableSpec("memory_nodes", "Memory graph nodes", key_cols=("uuid",), ts_col="updated_at"),
+    TableSpec("memory_edges", "Memory graph facts", time_col="valid_at", key_cols=("uuid",), ts_col="updated_at"),
+    TableSpec("memory_sync", "Memory sync bookkeeping", refs={"event_id": "bt_events"}, key_cols=("event_id", "symbol"),
+              ts_col="synced_at", parent_filter=("event_id", "bt_events", "time")),
 )
 SPEC_BY_NAME = {s.name: s for s in SPECS}
 ORDER = [s.name for s in SPECS]
@@ -97,13 +102,14 @@ ORDER = [s.name for s in SPECS]
 DEPENDENTS: dict[str, list[str]] = {
     "news_items": ["analyses", "signals"],
     "analyses": ["signals"],
-    "bt_events": ["bt_outcomes", "bt_predictions"],
+    "bt_events": ["bt_outcomes", "bt_predictions", "memory_sync"],
 }
 
 
 def _table(name: str) -> Table:
     from app import models  # noqa: F401  (register tables)
     from app.backtest import models as _bt  # noqa: F401
+    from app.memory import models as _mem  # noqa: F401
 
     return Base.metadata.tables[name]
 

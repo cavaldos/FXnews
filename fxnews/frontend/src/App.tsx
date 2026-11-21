@@ -22,6 +22,7 @@ import { BacktestPage } from './pages/BacktestPage'
 import { CalendarPage } from './pages/CalendarPage'
 import { DataPage } from './pages/DataPage'
 import LlmLabPage from './pages/LlmLabPage'
+import { MemoryPage } from './pages/MemoryPage'
 import { fmtTime, toMs } from './lib/format'
 import { isRelated, itemTime, mergeNews, sortNewest, sortOldest } from './lib/news'
 
@@ -288,6 +289,7 @@ export default function App() {
       {page === 'calendar' ? <CalendarPage onSelect={setSelectedNews} calendarRev={calendarRev} /> : null}
       {page === 'backtest' ? <BacktestPage /> : null}
       {page === 'llm' ? <LlmLabPage /> : null}
+      {page === 'memory' ? <MemoryPage /> : null}
       {page === 'data' ? <DataPage /> : null}
 
       {page === 'dashboard' ? (

@@ -63,7 +63,7 @@ export function PriceChart({ sym, symbol, interval, onInterval, news, signals, o
   const candlesQ = useFetch(
     `candles:${symbol}:${interval}`,
     (signal) => api.candles(symbol, interval, undefined, signal),
-    fast ? 15_000 : 60_000,
+    fast ? 3_000 : 5_000,
     API_RETRY_MS,
   )
   const data = candlesQ.data

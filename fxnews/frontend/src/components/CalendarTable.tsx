@@ -120,10 +120,10 @@ function sortItems(
   return [...items].sort((x, y) => {
     const a = sortValue(x, key, reactionOf);
     const b = sortValue(y, key, reactionOf);
-    // Empty cells always sink to the bottom, whichever way we sort.
+    // Empty cells always sink to the bottom, whichever way we sort. Ties: newest first.
     if (a === null || b === null)
-      return a === b ? itemTime(x) - itemTime(y) : a === null ? 1 : -1;
-    return sign * compare(a, b) || itemTime(x) - itemTime(y) || x.id - y.id;
+      return a === b ? itemTime(y) - itemTime(x) : a === null ? 1 : -1;
+    return sign * compare(a, b) || itemTime(y) - itemTime(x) || y.id - x.id;
   });
 }
 
@@ -303,7 +303,7 @@ export function CalendarTable({
   horizon = "1h",
   reactionFilter = [],
 }: Props) {
-  const [sortRaw, setSortRaw] = useStoredString("fxnews.cal.sort.v2", "time:desc");
+  const [sortRaw, setSortRaw] = useStoredString("fxnews.cal.sort.v3", "time:desc");
   const { key: sortKey, dir } = parseSort(sortRaw);
   const now = useNowSlow();
   const lookup = useReactionLookup();
@@ -400,7 +400,7 @@ export function CalendarTable({
     setSortRaw(
       key === sortKey
         ? `${key}:${dir === "asc" ? "desc" : "asc"}`
-        : `${key}:${key === "time" || key === "title" || key === "currency" || key === "source" ? "asc" : "desc"}`,
+        : `${key}:${key === "title" || key === "currency" || key === "source" ? "asc" : "desc"}`,
     );
 
   return (
@@ -564,6 +564,15 @@ export function CalendarTable({
           onClick={() => jumpToNow(true)}
         >
           Jump to now
+        </button>
+      ) : sortKey !== "time" && now >= fromMs && now < toMs && rows.length > 0 ? (
+        <button
+          type="button"
+          className="ct-jump"
+          title="The NOW line is shown only when sorted by time"
+          onClick={() => setSortRaw("time:desc")}
+        >
+          Sort by time (newest first)
         </button>
       ) : null}
       {rows.length === 0 ? (

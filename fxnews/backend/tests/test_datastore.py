@@ -108,7 +108,8 @@ def test_tables_overview(client):
     assert r.status_code == 200
     body = r.json()
     rows = {t["name"]: t["rows"] for t in body["tables"]}
-    assert rows == {"news_items": 2, "analyses": 1, "signals": 1, "bt_events": 1, "bt_outcomes": 1, "bt_predictions": 2}
+    assert rows == {"news_items": 2, "analyses": 1, "signals": 1, "bt_events": 1, "bt_outcomes": 1, "bt_predictions": 2,
+                    "memory_nodes": 0, "memory_edges": 0, "memory_sync": 0}
     assert all(t["label"] for t in body["tables"])
     assert body["db_path"].endswith("test.db") and body["size_bytes"] > 0
 
@@ -134,7 +135,7 @@ def test_json_export_shape_and_filter(client):
     raw = export_json(client)
     doc = json.loads(gzip.decompress(raw))
     assert doc["format"] == "fxnews-export" and doc["version"] == 1 and doc["exported_at"]
-    assert set(doc["schema"]) == set(doc["tables"]) == {"news_items", "analyses", "signals", "bt_events", "bt_outcomes", "bt_predictions"}
+    assert set(doc["schema"]) == set(doc["tables"]) == {"news_items", "analyses", "signals", "bt_events", "bt_outcomes", "bt_predictions", "memory_nodes", "memory_edges", "memory_sync"}
     assert "dedupe_key" in doc["schema"]["news_items"]
     n1 = next(n for n in doc["tables"]["news_items"] if n["dedupe_key"] == "a-n1")
     assert n1["raw"] == {"x": [1, 2]} and n1["event_time"].startswith("2026-11-01T12:00:00")

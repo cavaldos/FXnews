@@ -107,6 +107,24 @@ class Settings(BaseSettings):
     headline_history_max_total: int = 20000
     headline_history_request_delay_seconds: float = 1.0  # pause between requests to the same host
 
+    # ── Long-term memory (app/memory, Graphiti knowledge graph) ──
+    # Stores ONLY observed facts (event + actual market outcome per symbol), never any model's prediction / bias.
+    memory_backend: str = "neo4j"  # neo4j | falkordb
+    memory_neo4j_uri: str = "bolt://localhost:7687"
+    memory_neo4j_user: str = "neo4j"
+    memory_neo4j_password: str = ""
+    memory_falkordb_host: str = "localhost"
+    memory_falkordb_port: int = 6379
+    # Embeddings for semantic search. "hash" = local, free, offline (token feature hashing; BM25 does most of the work).
+    # "openai" = any OpenAI-compatible /embeddings endpoint. Changing embedder / dim later needs a rebuild of the graph.
+    memory_embedder: str = "hash"  # hash | openai
+    memory_embedding_dim: int = 384
+    memory_embedding_model: str = "text-embedding-3-small"
+    memory_embedding_base_url: str = ""  # "" = api.openai.com
+    memory_embedding_api_key: str = ""
+    memory_include_summary: bool = False  # also store the article summary (published text; may carry editorial opinion)
+    memory_sync_batch: int = 200
+
     # ── Market data ──
     # TradingView (public websocket, no key) is primary so candles match the TradingView chart exactly.
     tradingview_enabled: bool = True

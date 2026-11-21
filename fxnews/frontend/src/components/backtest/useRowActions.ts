@@ -6,6 +6,8 @@ import { errMessage, verifyProblem } from './btFormat'
 export interface RowState {
   verifying?: boolean
   predicting?: boolean
+  /** Models currently being asked (shown as running chips). */
+  pendingModels?: string[]
   /** Why the last verify produced nothing or failed. */
   verifyError?: string
   verifyReport?: BtVerifyReport
@@ -46,18 +48,31 @@ export function useRowActions(apply: (event: BtEvent) => void, changed: () => vo
 
   const predict = useCallback(
     async (id: number, models: string[], force = false) => {
-      patch(id, { predicting: true, predictError: undefined })
+      if (models.length === 0) return
+      // Several runs may overlap on one row: track the union of models in flight.
+      const begin = (s: RowState | undefined): RowState => {
+        const pending = [...new Set([...(s?.pendingModels ?? []), ...models])]
+        return { ...s, predicting: true, pendingModels: pending, predictError: undefined }
+      }
+      const end = (s: RowState | undefined, extra: RowState): RowState => {
+        const pending = (s?.pendingModels ?? []).filter((m) => !models.includes(m))
+        return { ...s, ...extra, pendingModels: pending, predicting: pending.length > 0 }
+      }
+      setState((s) => ({ ...s, [id]: begin(s[id]) }))
       used?.(models)
       try {
         const out = await backtestApi.predictEvent(id, models, force)
         apply(out.event)
-        patch(id, { predicting: false, runs: out.results })
+        setState((s) => {
+          const prev = (s[id]?.runs ?? []).filter((r) => !models.includes(r.model))
+          return { ...s, [id]: end(s[id], { runs: [...prev, ...out.results] }) }
+        })
         changed()
       } catch (err) {
-        patch(id, { predicting: false, predictError: errMessage(err) })
+        setState((s) => ({ ...s, [id]: end(s[id], { predictError: errMessage(err) }) }))
       }
     },
-    [apply, changed, patch, used],
+    [apply, changed, used],
   )
 
   return { state, verify, predict }

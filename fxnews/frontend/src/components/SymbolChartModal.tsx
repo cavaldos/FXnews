@@ -60,8 +60,8 @@ function rangeFor(time: number | null | undefined, now: number): string | undefi
 
 /** Large modal with a candlestick chart (backend candles) for one symbol; TradingView embed when the backend has no data. */
 export function SymbolChartModal({ symbol, sym, time, onClose }: Props) {
-  const [intervalPref, setIntervalPref] = useStoredString('fxnews.modalInterval', '15m')
-  const interval: Interval = INTERVALS.includes(intervalPref as Interval) ? (intervalPref as Interval) : '15m'
+  const [intervalPref, setIntervalPref] = useStoredString('fxnews.modalInterval.v2', '1m')
+  const interval: Interval = INTERVALS.includes(intervalPref as Interval) ? (intervalPref as Interval) : '1m'
   const digits = sym?.digits ?? 5
   const fast = interval === '1m' || interval === '5m'
   // Fixed at open time so polling doesn't change the key.
@@ -71,10 +71,10 @@ export function SymbolChartModal({ symbol, sym, time, onClose }: Props) {
   const candlesQ = useFetch(
     `sc-candles:${symbol}:${interval}:${range ?? ''}`,
     (signal) => api.candles(symbol, interval, range, signal),
-    fast ? 15_000 : 60_000,
+    fast ? 3_000 : 5_000,
     API_RETRY_MS,
   )
-  const quoteQ = useFetch(`sc-quote:${symbol}`, (signal) => api.quotes([symbol], signal), 15_000)
+  const quoteQ = useFetch(`sc-quote:${symbol}`, (signal) => api.quotes([symbol], signal), 3_000)
   const newsQ = useFetch(`sc-news:${symbol}`, (signal) => api.news({ symbol, limit: 200 }, signal), 120_000)
 
   const data = candlesQ.data
