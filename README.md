@@ -8,14 +8,14 @@ outcome is stored as a long-term "market memory" that future analyses can retrie
 > This is a research and decision-support tool, not financial advice. LLM output and rule scores can be wrong.
 > Verify every idea yourself before trading.
 
-The code lives in [`fxnews/`](fxnews/README.md):
+The project has two parts at the repository root:
 
 | Part | Stack | Default port |
 |---|---|---|
-| `fxnews/backend/` | Python 3.12+, FastAPI, SQLAlchemy, SQLite (WAL), httpx, pydantic | 8000 |
-| `fxnews/frontend/` | React 19, Vite, TypeScript, lightweight-charts | 5173 |
+| `backend/` | Python 3.12+, FastAPI, SQLAlchemy, SQLite (WAL), httpx, pydantic | 8000 |
+| `frontend/` | React 19, Vite, TypeScript, lightweight-charts | 5173 |
 
-[`fxnews/README.md`](fxnews/README.md) (in Vietnamese) holds the detailed field-level API contract and the
+[`docs/README.vi.md`](docs/README.vi.md) (in Vietnamese) holds the detailed field-level API contract and the
 environment reference.
 
 ---
@@ -153,7 +153,7 @@ persist in `localStorage`.
 - Logging: `httpx` and `httpcore` are kept at WARNING so that URLs containing secrets (Discord webhook tokens,
   `apikey` query parameters) never reach the logs.
 
-### 2.3 Backend layout (`fxnews/backend/app/`)
+### 2.3 Backend layout (`backend/app/`)
 
 | Package / module | Responsibility |
 |---|---|
@@ -213,7 +213,7 @@ The API has no login. It is designed for a local machine:
 Run it behind a reverse proxy or on a LAN only after adding authentication and updating `ALLOWED_HOSTS` and
 `CORS_ORIGINS`.
 
-### 2.7 Frontend layout (`fxnews/frontend/src/`)
+### 2.7 Frontend layout (`frontend/src/`)
 
 | Folder | Responsibility |
 |---|---|
@@ -235,24 +235,25 @@ to the backend on port 8000.
 ```
 NewsTrade/
 ├── README.md                 # this file
-└── fxnews/
-    ├── README.md             # detailed guide (Vietnamese)
-    ├── dev.sh                # starts backend and frontend together
-    ├── docs/                 # review notes and task specs
-    ├── backend/
-    │   ├── app/              # application code (see 2.3)
-    │   ├── tests/            # pytest suite
-    │   ├── scripts/          # one-off utilities (e.g. fetch_history.py)
-    │   ├── data/             # SQLite DB, exports and backups (runtime)
-    │   ├── llm.ex.yaml       # LLM config template (copy to llm.yaml)
-    │   ├── .env.example      # environment template
-    │   ├── pytest.ini
-    │   ├── requirements.txt
-    │   └── docker-compose.memory.yml   # optional Neo4j for Graphiti
-    └── frontend/
-        ├── src/              # see 2.7
-        ├── package.json
-        └── vite.config.ts
+├── dev.sh                    # starts backend and frontend together
+├── docs/
+│   ├── README.vi.md          # detailed guide (Vietnamese)
+│   ├── review-backend-core.md
+│   └── tasks/                # task specs
+├── backend/
+│   ├── app/                  # application code (see 2.3)
+│   ├── tests/                # pytest suite
+│   ├── scripts/              # one-off utilities (e.g. fetch_history.py)
+│   ├── data/                 # SQLite DB, exports and backups (runtime)
+│   ├── llm.ex.yaml           # LLM config template (copy to llm.yaml)
+│   ├── .env.example          # environment template
+│   ├── pytest.ini
+│   ├── requirements.txt
+│   └── docker-compose.memory.yml   # optional Neo4j for Graphiti
+└── frontend/
+    ├── src/                  # see 2.7
+    ├── package.json
+    └── vite.config.ts
 ```
 
 ---
@@ -269,7 +270,7 @@ NewsTrade/
 ```bash
 git clone <repo-url> NewsTrade
 cd NewsTrade
-./fxnews/dev.sh
+./dev.sh
 ```
 
 `dev.sh` creates the backend virtualenv and installs requirements on first run, copies `.env.example` to `.env` if
@@ -280,7 +281,7 @@ both.
 
 ```bash
 # Backend
-cd fxnews/backend
+cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env          # set OPENROUTER_API_KEY, DISCORD_WEBHOOK_URL, etc.
@@ -288,7 +289,7 @@ cp llm.ex.yaml llm.yaml       # optional: multi-provider LLM config
 uvicorn app.main:app --reload --port 8000 --timeout-graceful-shutdown 3
 
 # Frontend (second terminal)
-cd fxnews/frontend
+cd frontend
 npm install
 npm run dev                   # http://localhost:5173, proxies /api to :8000
 ```
@@ -299,7 +300,7 @@ npm run dev                   # http://localhost:5173, proxies /api to :8000
 ### Optional: long-term memory with Neo4j
 
 ```bash
-cd fxnews/backend
+cd backend
 NEO4J_PASSWORD=change-me docker compose -f docker-compose.memory.yml up -d
 # in .env: MEMORY_NEO4J_PASSWORD=change-me
 python -m app.memory init
@@ -329,14 +330,14 @@ Without Neo4j, memory still works on SQLite; the Memory page and Data page do no
 | `MEMORY_BACKEND`, `MEMORY_NEO4J_*`, `MEMORY_EMBEDDER` | see `.env.example` | Memory storage and embeddings |
 | `DATA_BACKUP_DIR`, `DATA_BACKUP_KEEP`, `DATA_IMPORT_MAX_MB` | see `.env.example` | Data export, backup, and import limits |
 
-The full list, with comments, is in `fxnews/backend/.env.example`.
+The full list, with comments, is in `backend/.env.example`.
 
 ---
 
 ## 6. Testing
 
 ```bash
-cd fxnews/backend
+cd backend
 source .venv/bin/activate
 pytest                 # unit and integration tests (offline)
 pytest -m network      # live smoke tests against real internet sources (opt-in)
@@ -354,7 +355,7 @@ Frontend: `npm run lint` and `npm run build` (type-check with `tsc -b`, then Vit
 
 - ForexFactory's feed has no actual values, so surprise-based rules depend on headline text.
 - Free data sources are unreliable: some RSS feeds return 403 or time out, and Yahoo rate-limits by IP. Check
-  `fxnews/README.md` (section 2) for the current status.
+  `docs/README.vi.md` (section 2) for the current status.
 - TradingView's websocket is unofficial and may change without notice.
 - In-memory cost controls and job registries reset on restart.
 - No authentication. Keep the API on localhost or add an auth layer before exposing it.
@@ -363,7 +364,7 @@ Frontend: `npm run lint` and `npm run build` (type-check with `tsc -b`, then Vit
 
 ## 8. Further reading
 
-- [`fxnews/README.md`](fxnews/README.md): detailed guide in Vietnamese (data flow, API tables, `.env` reference,
+- [`docs/README.vi.md`](docs/README.vi.md): detailed guide in Vietnamese (data flow, API tables, `.env` reference,
   memory design, legacy-port notes)
-- [`fxnews/docs/review-backend-core.md`](fxnews/docs/review-backend-core.md) and
-  [`fxnews/docs/tasks/`](fxnews/docs/tasks/): review notes and task specs
+- [`docs/review-backend-core.md`](docs/review-backend-core.md) and
+  [`docs/tasks/`](docs/tasks/): review notes and task specs

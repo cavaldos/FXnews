@@ -4,7 +4,7 @@ Hệ thống mới, tách riêng khỏi dự án Node.js cũ ở thư mục gố
 chỉ port logic sang Python). Gồm 2 phần độc lập:
 
 ```
-fxnews/
+
 ├── backend/    Python 3.12+ · FastAPI · SQLite · httpx   (port 8000)
 └── frontend/   React 19 · Vite · TypeScript · lightweight-charts (port 5173)
 ```
@@ -71,7 +71,7 @@ Stooq có chặn bot. Yahoo chart API đôi khi trả 429 theo IP → backend tr
 | Ingest + scheduler, routers news/signals/advice/stream/system | `app/services/*`, `app/routers/*` | lead |
 | Nguồn RSS | `app/sources/rss.py` | agent backend |
 | Nến + quote | `app/market/candles.py`, `app/routers/market.py` | agent backend |
-| Toàn bộ frontend | `fxnews/frontend/` | agent frontend |
+| Toàn bộ frontend | `frontend/` | agent frontend |
 
 ## 4. API contract (prefix `/api`)
 
@@ -102,14 +102,14 @@ Thời gian: mọi timestamp trong API là ISO-8601 UTC (`...Z`); nến dùng un
 
 ```bash
 # backend
-cd fxnews/backend
+cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env        # điền OPENROUTER_API_KEY, DISCORD_WEBHOOK_URL
 uvicorn app.main:app --reload --port 8000 --timeout-graceful-shutdown 3
 
 # frontend
-cd fxnews/frontend
+cd frontend
 npm install
 npm run dev                 # http://localhost:5173 (proxy /api → :8000)
 ```
@@ -182,4 +182,4 @@ màu theo hướng giá ở horizon đã chọn, kích thước theo độ lớn
 | `src/analysis/newsSignalGenerator.js` (regex chủ đề → symbol, keyword bias) | `app/analysis/mapping.py`, `rules.py` |
 | `src/prices/mt5ToYahoo.js`, `yahooChart.js` | `app/market/symbols.py`, `candles.py` |
 | `src/analysis/recommendedAction.js` | `rules.recommended_action()` |
-| `frontend/src/style/global.css` (theme tối) | `fxnews/frontend` dùng lại token màu |
+| `frontend/src/style/global.css` (theme tối) | `frontend` dùng lại token màu |

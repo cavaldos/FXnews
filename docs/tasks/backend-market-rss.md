@@ -1,7 +1,7 @@
 # Task: backend — RSS source + market data (candles/quotes)
 
-Bối cảnh: đọc `fxnews/README.md` (kiến trúc + API contract) và `fxnews/backend/app/schemas.py` trước.
-Backend Python ở `fxnews/backend` (venv đã cài sẵn: `fxnews/backend/.venv`, chạy bằng `.venv/bin/python`,
+Bối cảnh: đọc `docs/README.vi.md` (kiến trúc + API contract) và `backend/app/schemas.py` trước.
+Backend Python ở `backend` (venv đã cài sẵn: `backend/.venv`, chạy bằng `.venv/bin/python`,
 `.venv/bin/pytest`). Lead (agent khác) đang viết song song: `config.py, db.py, models.py, main.py, events.py,
 sources/forexfactory.py, analysis/*, notify/*, services/*, routers/` (trừ `routers/market.py`).
 
@@ -49,7 +49,7 @@ ticker lấy từ `app/market/symbols.py` (`get_symbol(sym).yahoo`).
 - `tests/test_candles.py`: mock Yahoo JSON → kiểm tra bỏ None, sort, resample 4h, quotes.
 - Thêm 1 smoke test chạy thật (đánh dấu `@pytest.mark.network`, skip mặc định) gọi FXStreet + Yahoo EURUSD.
 - Tự chạy thật 1 lần bằng script nhỏ để chắc chắn feed FXStreet và Yahoo EURUSD/XAUUSD trả dữ liệu.
-- Nếu cần cấu hình pytest (marker, asyncio_mode) thì tạo `fxnews/backend/pytest.ini`.
+- Nếu cần cấu hình pytest (marker, asyncio_mode) thì tạo `backend/pytest.ini`.
 
 ## Báo cáo khi xong
 

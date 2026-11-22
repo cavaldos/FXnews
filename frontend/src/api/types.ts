@@ -1,4 +1,4 @@
-// Mirror of fxnews/backend/app/schemas.py — keep in sync with that file.
+// Mirror of backend/app/schemas.py — keep in sync with that file.
 // Every datetime is an ISO-8601 string (UTC); candle times are unix seconds.
 
 export type NewsKind = 'calendar' | 'headline'

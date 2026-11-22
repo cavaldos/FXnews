@@ -1,4 +1,4 @@
-# Review backend core (fxnews/backend/app)
+# Review backend core (backend/app)
 
 Phạm vi: `config.py, db.py, models.py, events.py, sources/forexfactory.py, analysis/{mapping,rules,llm,advisor}.py, notify/discord.py, services/{ingest,scheduler,serializers}.py, routers/{news,signals,system}.py, main.py`.
 
@@ -178,7 +178,7 @@ Lưu ý quy trình: ở script P7 phần A, `POST /api/ingest/run` chạy **trư
 
 ## Script chứng minh
 
-Chạy bằng `.venv/bin/python <đường dẫn>` từ `fxnews/backend`. Tất cả dùng DB tạm và đặt biến môi trường trước khi import `app`. Riêng P7 phần A cần được sửa (cài mock trước khi gọi `/api/ingest/run`) trước khi chạy lại, nếu không nó sẽ gọi mạng thật.
+Chạy bằng `.venv/bin/python <đường dẫn>` từ `backend`. Tất cả dùng DB tạm và đặt biến môi trường trước khi import `app`. Riêng P7 phần A cần được sửa (cài mock trước khi gọi `/api/ingest/run`) trước khi chạy lại, nếu không nó sẽ gọi mạng thật.
 
 ```
 _env (prelude dùng chung)  /private/tmp/claude-501/-Users-bourbon-Code-Trading-NewsTrade/92135206-1f1c-4cff-8f5b-792d8d95e4a3/scratchpad/_env.py

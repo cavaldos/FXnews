@@ -1,4 +1,4 @@
-"""API contract. Frontend types in fxnews/frontend/src/api/types.ts mirror this file."""
+"""API contract. Frontend types in frontend/src/api/types.ts mirror this file."""
 
 from __future__ import annotations
 

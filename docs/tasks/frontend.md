@@ -1,14 +1,14 @@
 # Task: frontend — dashboard tin tức + chart + AI panel
 
-Bối cảnh: đọc `fxnews/README.md` (kiến trúc + API contract) và `fxnews/backend/app/schemas.py` (nguồn chuẩn của kiểu dữ liệu).
+Bối cảnh: đọc `docs/README.vi.md` (kiến trúc + API contract) và `backend/app/schemas.py` (nguồn chuẩn của kiểu dữ liệu).
 Backend FastAPI chạy ở `http://127.0.0.1:8000` (lead đang viết song song; có thể chưa chạy được lúc bạn bắt đầu —
 cứ code theo contract, khi backend lên thì test thật).
 
-**Chỉ làm trong `fxnews/frontend/`.** Không sửa `frontend/` cũ ở gốc (chỉ được đọc/copy), không sửa backend, không git commit.
+**Chỉ làm trong `frontend/`.** Không sửa `frontend/` cũ ở gốc (chỉ được đọc/copy), không sửa backend, không git commit.
 
 ## Stack
 
-- Vite + React 19 + TypeScript (scaffold mới trong `fxnews/frontend`). CSS thuần hoặc Tailwind v4 đều được — ưu tiên đơn giản.
+- Vite + React 19 + TypeScript (scaffold mới trong `frontend`). CSS thuần hoặc Tailwind v4 đều được — ưu tiên đơn giản.
 - Chart: **TradingView lightweight-charts** (npm `lightweight-charts`, bản 5.x, pin version cụ thể). API v5:
   `chart.addSeries(CandlestickSeries, ...)`, `createSeriesMarkers(series, markers)`.
 - Vite dev server port 5173, proxy `/api` → `http://127.0.0.1:8000` (kể cả SSE `/api/stream`).

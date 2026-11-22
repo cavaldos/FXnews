@@ -1,6 +1,6 @@
 """Fetch historical events (calendar + headlines) and price outcomes for 2026, and 2025 when available.
 
-Usage (from fxnews/backend):
+Usage (from backend):
     python scripts/fetch_history.py                       # 2026-01-01 -> now, then 2025 (best effort)
     python scripts/fetch_history.py --years 2026          # only 2026
     python scripts/fetch_history.py --from 2025-06-01 --to 2025-08-31
