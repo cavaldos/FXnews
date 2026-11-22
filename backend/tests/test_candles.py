@@ -205,20 +205,22 @@ async def test_cache_hit_expiry_and_distinct_keys(monkeypatch):
     await market.get_candles("EURUSD", "5m")  # other interval
     assert route.call_count == 4
 
-    clock["t"] += 59
+    ttl = market._INTERVAL_CFG["15m"][3]  # the cache TTL is configured per interval
+    clock["t"] += ttl - 1
     await market.get_candles("EURUSD", "15m")
     assert route.call_count == 4
-    clock["t"] += 2  # > 60s
+    clock["t"] += 2  # > TTL
     await market.get_candles("EURUSD", "15m")
     assert route.call_count == 5
 
-    # 1h has a longer TTL (300s)
+    # 1h entry: fresh within its own TTL, refetched after it
     await market.get_candles("EURUSD", "1h")
     n = route.call_count
-    clock["t"] += 200
+    ttl_1h = market._INTERVAL_CFG["1h"][3]
+    clock["t"] += ttl_1h - 1
     await market.get_candles("EURUSD", "1h")
     assert route.call_count == n
-    clock["t"] += 101
+    clock["t"] += 2
     await market.get_candles("EURUSD", "1h")
     assert route.call_count == n + 1
 
@@ -480,7 +482,7 @@ async def test_stale_window_expires(clock):
     await market.get_candles("EURUSD", "15m")
     state["up"] = False
 
-    clock.advance(60 + market.STALE_MAX_AGE_S - 1)
+    clock.advance(market._INTERVAL_CFG["15m"][3] + market.STALE_MAX_AGE_S - 1)
     assert (await market.get_candles("EURUSD", "15m")).source == "yahoo-stale"
     clock.advance(2)  # now beyond TTL + STALE_MAX_AGE_S
     with pytest.raises(market.MarketDataError):
@@ -721,10 +723,11 @@ async def test_quotes_fall_back_to_twelvedata(td_key, clock):
     req = td.calls.last.request
     assert req.url.path == "/quote" and dict(req.url.params) == {"symbol": "EUR/USD", "apikey": TD_KEY}
 
-    clock.advance(45)  # Twelve Data quotes are cached for 60s (Yahoo ones for 15s)
+    ttl = max(market.QUOTE_TTL_S, market.TWELVEDATA_QUOTE_TTL_S)  # Twelve Data quote cache lifetime
+    clock.advance(ttl - 1)
     await market.get_quotes(["EURUSD"])
     assert td.call_count == 1
-    clock.advance(16)
+    clock.advance(2)
     await market.get_quotes(["EURUSD"])
     assert td.call_count == 2
 

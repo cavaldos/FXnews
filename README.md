@@ -368,3 +368,9 @@ Frontend: `npm run lint` and `npm run build` (type-check with `tsc -b`, then Vit
   memory design, legacy-port notes)
 - [`docs/review-backend-core.md`](docs/review-backend-core.md) and
   [`docs/tasks/`](docs/tasks/): review notes and task specs
+
+---
+
+## 9. License
+
+Released under the [MIT License](LICENSE).

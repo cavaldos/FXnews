@@ -16,6 +16,7 @@ from app.analysis.mapping import symbol_sign
 from app.config import get_settings
 from app.db import session_scope, utcnow
 from app.events import broadcaster
+from app.memory.recall import memory_block
 from app.market.symbols import SYMBOLS, get_symbol
 from app.models import Analysis, NewsItem, Signal
 from app.schemas import AnalysisOut, CurrencyImpact, Scenario, TradeIdea
@@ -37,6 +38,8 @@ Return ONLY a single JSON object (no markdown, no text outside the JSON) followi
 
 Rules:
 - Only use symbols from the ALLOWED_SYMBOLS list.
+- PAST_REACTIONS (if present) are measured price moves after similar past releases: historical facts, not predictions. Use them
+  as context for typical size / direction of the reaction, weigh them against the current surprise, and never treat them as certain.
 - "bias" is the direction of the symbol's PRICE (bullish = symbol price rises). A currency that strengthens in the quote position pushes the pair price down
   (USD strong => EURUSD down, USDJPY up, XAUUSD down). Use the provided SYMBOL_SIGNS table.
 - "confidence" (0-100) reflects true certainty. Ambiguous, already priced-in or conflicting news => neutral or < 50.
@@ -48,6 +51,18 @@ Rules:
 
 
 # ── context helpers ──────────────────────────────────────────────────
+
+
+def _past_reactions(session: Session, query: str, symbols: list[str]) -> list[str]:
+    """Similar past releases and the price move that followed (long-term memory). Never blocks an analysis."""
+    settings = get_settings()
+    if not settings.memory_recall_enabled or not symbols:
+        return []
+    try:
+        return memory_block(session, query, symbols[:3], per_symbol=settings.memory_recall_per_symbol)
+    except Exception as exc:  # noqa: BLE001 - memory is optional context
+        log.warning("memory recall failed: %s", exc)
+        return []
 
 
 def _currency_filter(currencies: list[str]):
@@ -352,12 +367,15 @@ async def _analyze_news(news_id: int, *, model: str | None, kind: str | None, no
             "calendar_last24h_next24h": calendar_window(session, currencies, hours_back=24, hours_ahead=24),
         }
         titles = [n.title for n in group]
+        past = _past_reactions(session, " ".join(titles), symbols or [])
         impact, primary_currency = news.impact, (currencies[0] if currencies else None)
 
     # Unmapped headline (manual "analyze"): let the model pick among the most liquid markets.
     allowed = symbols or ["EURUSD", "USDJPY", "XAUUSD", "US500"]
     context["ALLOWED_SYMBOLS"] = allowed
     context["SYMBOL_SIGNS"] = _sign_table(allowed, currencies)
+    if past:
+        context["PAST_REACTIONS"] = past
     context["PRICE_CONTEXT"] = [pc for sym in allowed[:3] if (pc := await price_context(sym))]
 
     model_id = settings.model_for(allowed[0], model)
@@ -406,6 +424,9 @@ async def advise(symbol: str, *, question: str | None = None, model: str | None 
             "previous_analyses": [{"at": a.created_at.strftime("%Y-%m-%d %H:%M"), "summary": a.summary[:300],
                                    "trades": [t for t in a.trades if t.get("symbol") == info.symbol]} for a in recent],
         }
+        past = _past_reactions(session, " ".join([question, *context["calendar_last24h_next48h"]]), [info.symbol])
+        if past:
+            context["PAST_REACTIONS"] = past
 
     context["PRICE_CONTEXT"] = [pc for pc in (await price_context(info.symbol, interval, 120),
                                               await price_context(info.symbol, "1h", 72)) if pc]

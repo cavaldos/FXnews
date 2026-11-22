@@ -124,6 +124,8 @@ class Settings(BaseSettings):
     memory_embedding_api_key: str = ""
     memory_include_summary: bool = False  # also store the article summary (published text; may carry editorial opinion)
     memory_sync_batch: int = 200
+    memory_recall_enabled: bool = True  # feed similar past reactions (facts only) into the advisor prompt
+    memory_recall_per_symbol: int = 4
 
     # ── Market data ──
     # TradingView (public websocket, no key) is primary so candles match the TradingView chart exactly.

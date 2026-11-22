@@ -274,3 +274,26 @@ async def test_memory_tables_round_trip_through_json_export(db, tmp_path):
     with session_scope() as s:
         assert len(s.execute(select(MemoryEdge)).scalars().all()) == 3
         assert len(s.execute(select(MemoryNode)).scalars().all()) == 4
+
+
+# ── recall for the advisor prompt ────────────────────────────────────────
+
+
+def test_recall_for_advisor_is_facts_only_and_respects_as_of():
+    from app.memory.recall import memory_block, recall
+
+    init_db()
+    with session_scope() as db:
+        db.execute(delete(MemoryEdge))
+        rec = build_record(_event(), _outcome())
+        for e in rec.edges:
+            db.add(MemoryEdge(uuid=e.uuid, group_id=rec.group_id, name=e.name, source_uuid=e.source_uuid,
+                              target_uuid=e.target_uuid, fact=e.fact, valid_at=e.valid_at, attributes=e.attributes))
+        db.flush()
+        assert [e.name for e in recall(db, "US Non-Farm Payrolls today", "EURUSD")] == [EDGE_REACTION]
+        assert recall(db, "Non-Farm Payrolls", "USDJPY") == []  # other symbol
+        assert recall(db, "ECB speech", "EURUSD") == []  # nothing similar
+        assert recall(db, "Non-Farm Payrolls", "EURUSD", as_of=T0 + timedelta(hours=1)) == []  # 1d not elapsed yet
+        lines = memory_block(db, "Non-Farm Payrolls", ["EURUSD", "USDJPY"])
+        assert len(lines) == 1 and "Observed move" in lines[0] and LLM_OPINION not in lines[0]
+        db.execute(delete(MemoryEdge))

@@ -101,6 +101,11 @@ def _check_clean(text: str, title: str) -> str:
     return text
 
 
+def is_clean(text: str, title: str = "") -> bool:
+    """True when the generated part of ``text`` (published ``title`` masked) has no opinion vocabulary."""
+    return not FORBIDDEN_WORDS.search(text.replace(title, " ") if title else text)
+
+
 def _event_view(event: BtEvent) -> dict[str, Any]:
     return {name: getattr(event, name) for name in EVENT_FIELDS}
 

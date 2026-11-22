@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 from app.backtest.models import BtEvent, BtOutcome
 from app.config import get_settings
 from app.db import session_scope, utcnow
-from app.memory.facts import BiasLeakError, EdgeSpec, MemoryRecord, NodeSpec, build_record
+from app.memory.facts import BiasLeakError, EdgeSpec, MemoryRecord, NodeSpec, build_record, is_clean
 from app.memory.models import MemoryEdge, MemoryNode, MemorySync
 
 log = logging.getLogger(__name__)
@@ -145,7 +145,11 @@ def records_from_db(db: Session, *, group_ids: list[str] | None = None) -> list[
     edges: dict[str, list[EdgeSpec]] = defaultdict(list)
     for n in db.execute(nq).scalars():
         nodes[n.group_id].append(NodeSpec(n.uuid, n.name, n.label, n.summary or "", dict(n.attributes or {})))
+    titles = {n.uuid: (n.attributes or {}).get("title", "") for g in nodes.values() for n in g}
     for e in db.execute(eq).scalars():
+        if not is_clean(e.fact, titles.get(e.source_uuid, "")):
+            log.warning("memory: dropped edge %s with opinion vocabulary (imported / edited row)", e.uuid)
+            continue
         edges[e.group_id].append(EdgeSpec(e.uuid, e.name, e.source_uuid, e.target_uuid, e.fact, e.valid_at,
                                           dict(e.attributes or {})))
     return [MemoryRecord(g, nodes[g], edges.get(g, [])) for g in sorted(nodes)]
