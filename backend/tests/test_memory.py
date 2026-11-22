@@ -297,3 +297,24 @@ def test_recall_for_advisor_is_facts_only_and_respects_as_of():
         lines = memory_block(db, "Non-Farm Payrolls", ["EURUSD", "USDJPY"])
         assert len(lines) == 1 and "Observed move" in lines[0] and LLM_OPINION not in lines[0]
         db.execute(delete(MemoryEdge))
+
+
+def test_tampered_rows_with_opinion_never_reach_prompt_or_graph():
+    from app.memory.recall import recall
+
+    init_db()
+    with session_scope() as db:
+        db.execute(delete(MemoryEdge)); db.execute(delete(MemoryNode))
+        rec = build_record(_event(), _outcome())
+        for n in rec.nodes:
+            db.add(MemoryNode(uuid=n.uuid, group_id=rec.group_id, label=n.label, name=n.name, summary=n.summary,
+                              attributes=n.attributes))
+        for e in rec.edges:  # an imported file smuggles a model's call into the fact text
+            db.add(MemoryEdge(uuid=e.uuid, group_id=rec.group_id, name=e.name, source_uuid=e.source_uuid,
+                              target_uuid=e.target_uuid, fact=e.fact + " " + LLM_OPINION, valid_at=e.valid_at,
+                              attributes=e.attributes))
+        db.flush()
+        assert recall(db, "Non-Farm Payrolls", "EURUSD") == []
+        reaction_edges = [e for r in sync_mod.records_from_db(db) for e in r.edges if e.name == EDGE_REACTION]
+        assert reaction_edges == []
+        db.execute(delete(MemoryEdge)); db.execute(delete(MemoryNode))
