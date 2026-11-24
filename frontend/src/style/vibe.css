@@ -1,0 +1,378 @@
+/* Vibe Lab page: Vibe-Trading sidecar (swarm research, FX backtests, FRED macro). Tokens from global.css. */
+.vibe-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 14px 24px;
+}
+
+.vibe-wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── status banner ── */
+.vibe-banner {
+  border: 1px solid var(--border);
+  padding: 10px 14px;
+  font-size: var(--fs-sm);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vibe-banner.ok {
+  border-color: var(--green-soft, var(--border));
+  color: var(--text-secondary);
+}
+
+.vibe-banner.warn {
+  border-color: var(--orange, var(--border));
+  color: var(--text-primary);
+  background: var(--surface);
+}
+
+.vibe-banner.loading {
+  color: var(--text-dim);
+}
+
+/* ── tabs ── */
+.vibe-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.vibe-tabs button {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.vibe-tabs button.active {
+  color: var(--accent);
+  border-color: var(--accent-dim, var(--border));
+  background: var(--surface-header);
+}
+
+/* ── panel (reuses the notify panel look) ── */
+.vibe-panel {
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  background-image: var(--noise-img);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.vibe-panel-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-header);
+}
+
+.vibe-panel-head h2 {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.vibe-panel-head p {
+  margin: 3px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.vibe-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+/* ── form ── */
+.vibe-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vibe-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.vibe-row .vibe-field {
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.vibe-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.vibe-label {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-secondary);
+}
+
+.vibe-req {
+  color: var(--orange);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.vibe-field input,
+.vibe-field textarea {
+  background: var(--bg-input, var(--bg-base));
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  padding: 6px 10px;
+}
+
+.vibe-field input:focus,
+.vibe-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.vibe-field textarea {
+  resize: vertical;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.vibe-hint {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+.vibe-warn-note {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--orange);
+}
+
+.vibe-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  padding: 6px 0;
+}
+
+.vibe-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.vibe-error {
+  color: var(--red);
+  font-size: var(--fs-sm);
+}
+
+/* ── run / result area ── */
+.vibe-run {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vibe-run-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.vibe-run-head .dim,
+.dim {
+  color: var(--text-dim);
+}
+
+.vibe-status {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.vibe-status.s-completed {
+  color: var(--green);
+  border-color: var(--green-soft, var(--border));
+}
+
+.vibe-status.s-running,
+.vibe-status.s-pending {
+  color: var(--accent);
+}
+
+.vibe-status.s-failed,
+.vibe-status.s-cancelled,
+.vibe-status.s-error {
+  color: var(--red);
+  border-color: var(--red-soft, var(--border));
+}
+
+/* ── swarm task list ── */
+.vibe-tasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.vibe-tasks li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--table-border-soft, var(--border));
+  font-size: var(--fs-sm);
+}
+
+.vibe-tasks li:last-child {
+  border-bottom: none;
+}
+
+.vibe-task-agent {
+  font-family: var(--mono);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.vibe-task-text {
+  color: var(--text-secondary);
+  min-width: 0;
+}
+
+/* ── markdown report: rendered as preformatted text (no md renderer in the app) ── */
+.vibe-report-title {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--text-secondary);
+}
+
+.vibe-report {
+  margin: 0;
+  border: 1px solid var(--border);
+  background: var(--bg-input, var(--bg-base));
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+/* ── backtest metrics ── */
+.vibe-metrics {
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.vibe-metrics th,
+.vibe-metrics td {
+  border: 1px solid var(--table-border-soft, var(--border));
+  padding: 4px 12px;
+  text-align: left;
+}
+
+.vibe-metrics th {
+  font-family: var(--mono);
+  color: var(--text-secondary);
+  text-transform: none;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+.vibe-metrics td {
+  color: var(--text-primary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.vibe-collapsible {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+/* ── charts ── */
+.vibe-chart {
+  border: 1px solid var(--border);
+  background: var(--bg-input, var(--bg-base));
+}
+
+.vibe-chart-empty {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  padding: 8px 0;
+}
+
+/* ── macro quick picks ── */
+.vibe-quick {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.vibe-chip {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.vibe-chip:hover {
+  border-color: var(--border-bright, var(--border));
+  color: var(--text-primary);
+}
+
+.vibe-chip.on {
+  color: var(--accent);
+  border-color: var(--accent-dim, var(--border));
+}

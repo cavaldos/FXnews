@@ -9,3 +9,12 @@ __pycache__/
 .venv/
 dist/
 *.log
+
+# Vibe-Trading sidecar (own venv, secrets, runtime state, optional docker source checkout)
+sidecar/vibe-trading/.venv/
+sidecar/vibe-trading/.env
+sidecar/vibe-trading/data/
+sidecar/vibe-trading/runs/
+sidecar/vibe-trading/src/
+/log
+

@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from app.analysis import llm
 from app.config import get_settings
 from app.db import init_db
-from app.routers import backtest, data, link_preview, llm_chat, memory, news, reaction, signals, system
+from app.routers import backtest, data, link_preview, llm_chat, memory, news, reaction, signals, system, vibe
 from app.security import install_security
 from app.services.scheduler import scheduler
 
@@ -41,6 +41,8 @@ async def lifespan(_app: FastAPI):
     await llm.aclose()
     from app.llm import aclose_default
     await aclose_default()
+    from app.vibe import get_client
+    await get_client().aclose()
     try:
         from app.market import candles
         await candles.aclose()
@@ -52,5 +54,5 @@ app = FastAPI(title="FXNews API", version=get_settings().app_version, lifespan=l
 # Host allow-list (DNS rebinding) + CORS + cross-site POST guard (CSRF). See app/security.py.
 install_security(app, allowed_origins=get_settings().cors_origins, allowed_hosts=get_settings().allowed_hosts)
 
-for r in (system.router, data.router, news.router, signals.router, backtest.router, reaction.router, link_preview.router, llm_chat.router, memory.router, *( [market.router] if market else [] )):
+for r in (system.router, data.router, news.router, signals.router, backtest.router, reaction.router, link_preview.router, llm_chat.router, memory.router, vibe.router, *( [market.router] if market else [] )):
     app.include_router(r)

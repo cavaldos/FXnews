@@ -164,8 +164,68 @@ class HealthOut(BaseModel):
     version: str
     llm_enabled: bool
     discord_enabled: bool
+    telegram_enabled: bool = False
     default_model: str
     last_ingest_at: datetime | None = None
+
+
+# ── notifications ────────────────────────────────────────────────────
+
+
+class NotifySettingsOut(BaseModel):
+    """What the UI shows. The secrets are reported as "set", never as values."""
+
+    rules: NotifyRulesOut
+    accounts: list[NotifyAccountOut]
+    file: str = ""  # the YAML file the settings come from ("" = none yet)
+
+
+class NotifyRulesOut(BaseModel):
+    min_impact: Impact
+    pre_event_lead_minutes: int
+    notify_analyses: bool
+    notify_pre_event: bool
+    min_confidence: int
+
+
+class NotifyAccountOut(BaseModel):
+    id: str  # "<channel>:<name>"
+    channel: Literal["telegram", "discord"]
+    name: str
+    enabled: bool
+    chat_id: str = ""
+    secret_set: bool = False
+
+
+class NotifySettingsIn(BaseModel):
+    """Partial update of backend/notify.yaml. A secret left out keeps its value; "" clears it."""
+
+    rules: NotifyRulesIn | None = None
+    accounts: list[NotifyAccountIn] | None = None
+
+
+class NotifyRulesIn(BaseModel):
+    min_impact: Impact | None = None
+    pre_event_lead_minutes: int | None = None
+    notify_analyses: bool | None = None
+    notify_pre_event: bool | None = None
+    min_confidence: int | None = None
+
+
+class NotifyAccountIn(BaseModel):
+    id: str | None = None  # the stored account's id (renaming keeps the secret)
+    channel: Literal["telegram", "discord"]
+    name: str = "main"
+    enabled: bool = True
+    chat_id: str = ""
+    bot_token: str | None = None  # telegram
+    webhook_url: str | None = None  # discord
+    source: Literal["file", "env"] = "file"  # "env" accounts are not written to the file
+
+
+class NotifyTestIn(BaseModel):
+    channel: Literal["telegram", "discord"] | None = None  # None = every enabled account
+    name: str | None = None  # one account of that channel
 
 
 class IngestResult(BaseModel):

@@ -80,7 +80,7 @@ async def resolve_host(host: str) -> list[str]:
     """All addresses of `host` (separate function so tests can stub DNS)."""
     loop = asyncio.get_running_loop()
     infos = await loop.getaddrinfo(host, None, type=socket.SOCK_STREAM)
-    return sorted({i[4][0] for i in infos})
+    return sorted({str(i[4][0]) for i in infos})
 
 
 async def check_url(url: str) -> str:

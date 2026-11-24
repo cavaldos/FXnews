@@ -40,6 +40,7 @@ class NewsItem(Base):
     raw: Mapped[dict] = mapped_column(JSON, default=dict)
     analysis_id: Mapped[int | None] = mapped_column(Integer)
     pre_event_alerted: Mapped[bool] = mapped_column(Boolean, default=False)
+    pre_event_notified: Mapped[bool] = mapped_column(Boolean, default=False)  # reminder already sent
     fetched_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
 

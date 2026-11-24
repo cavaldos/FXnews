@@ -3,9 +3,10 @@
 set -e
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
-# Backend: tạo venv + cài deps nếu chưa có
+# Backend: tạo lại venv nếu interpreter cũ không còn tồn tại
 cd "$ROOT/backend"
-if [ ! -d .venv ]; then
+if [ ! -x .venv/bin/python ]; then
+  rm -rf .venv
   python3 -m venv .venv
   .venv/bin/pip install -r requirements.txt
 fi
@@ -23,6 +24,12 @@ trap cleanup INT TERM EXIT
 pids+=($!)
 (cd "$ROOT/frontend" && exec npm run dev) &
 pids+=($!)
+
+if [ "${VIBE_SIDECAR:-0}" = "1" ]; then
+  (cd "$ROOT/sidecar/vibe-trading" && exec ./run.sh) &
+  pids+=($!)
+  echo "Vibe-Trading sidecar: http://127.0.0.1:${VIBE_PORT:-8899}/mcp (set VIBE_ENABLED=true in backend/.env)"
+fi
 
 echo "Backend:  http://localhost:8000"
 echo "Frontend: http://localhost:5173"

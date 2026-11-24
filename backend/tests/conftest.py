@@ -13,6 +13,9 @@ os.environ["OPENROUTER_API_KEY"] = "test-key"
 os.environ["LLM_CONFIG"] = str(_tmp / "no-llm.yaml")
 os.environ["DISCORD_WEBHOOK_URL"] = ""
 os.environ["TWELVEDATA_API_KEY"] = ""
+# The notification config is a YAML file (backend/notify.yaml): point it at a temp file so the tests never read
+# or write the developer's real one.
+os.environ["NOTIFY_CONFIG"] = str(_tmp / "notify.yaml")
 # Starlette's TestClient sends `Host: testserver`; the production default allow-list is localhost/127.0.0.1.
 os.environ["ALLOWED_HOSTS"] = '["localhost", "127.0.0.1", "testserver"]'
 os.environ["TRADINGVIEW_ENABLED"] = "false"  # tests never open the real websocket; test_tradingview.py opts in

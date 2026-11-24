@@ -31,7 +31,7 @@ import time
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from app.config import get_settings
 from app.schemas import Candle
@@ -235,7 +235,7 @@ async def _connect(url: str):
 
     return await connect(
         url,
-        origin=TV_ORIGIN,
+        origin=cast(Any, TV_ORIGIN),
         additional_headers={"User-Agent": TV_USER_AGENT},
         open_timeout=DEFAULT_TIMEOUT_S,
         close_timeout=2,

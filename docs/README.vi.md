@@ -27,7 +27,7 @@ chỉ port logic sang Python). Gồm 2 phần độc lập:
                             ▼
           ┌─────────────────┼──────────────────────┐
           ▼                 ▼                      ▼
-   SQLite (signals)   SSE /api/stream        notify/discord.py (webhook)
+   SQLite (signals)   SSE /api/stream        notify/ (Discord + Telegram webhook)
                             ▼
                   frontend: news feed · chart (TradingView lightweight-charts) · AI panel
 ```
@@ -53,7 +53,7 @@ Hai loại phân tích tự động:
 | Nến OHLC | Yahoo Finance chart API (`EURUSD=X`, `GC=F`…) — đã dùng ở dự án cũ | không |
 | Vẽ chart | TradingView **lightweight-charts** (Apache-2.0) + marker tin tức trên nến | không |
 | LLM | OpenRouter (OpenAI-compatible) — đổi model theo từng request / từng cặp | `OPENROUTER_API_KEY` |
-| Thông báo | Discord webhook | `DISCORD_WEBHOOK_URL` |
+| Thông báo | Discord webhook + Telegram bot (nhiều account/kênh) | `backend/notify.yaml` (mẫu: `notify.ex.yaml`) |
 
 Đã kiểm tra (11/2026): investinglive/forexlive RSS trả 403, investing.com RSS timeout, fxempire feed không cập nhật,
 Stooq có chặn bot. Yahoo chart API đôi khi trả 429 theo IP → backend trả cache cũ và chuyển sang Twelve Data
@@ -67,7 +67,7 @@ Stooq có chặn bot. Yahoo chart API đôi khi trả 429 theo IP → backend tr
 | Nguồn ForexFactory | `app/sources/forexfactory.py` | lead |
 | Map tin → cặp, luật | `app/analysis/mapping.py, rules.py`, `app/market/symbols.py` | lead |
 | OpenRouter + advisor | `app/analysis/llm.py, advisor.py` | lead |
-| Discord | `app/notify/discord.py` | lead |
+| Discord + Telegram | `app/notify/discord.py`, `telegram.py`, `config.py`, `messages.py` | lead |
 | Ingest + scheduler, routers news/signals/advice/stream/system | `app/services/*`, `app/routers/*` | lead |
 | Nguồn RSS | `app/sources/rss.py` | agent backend |
 | Nến + quote | `app/market/candles.py`, `app/routers/market.py` | agent backend |
@@ -94,7 +94,9 @@ Stooq có chặn bot. Yahoo chart API đôi khi trả 429 theo IP → backend tr
 | GET | `/quotes?symbols=EURUSD,XAUUSD` | `QuoteOut[]` |
 | GET | `/stream` | SSE: event `news` (NewsOut), `analysis` (AnalysisOut) |
 | POST | `/ingest/run` | chạy ngay 1 vòng thu thập → `{inserted, analyzed}` |
-| POST | `/notify/test` | gửi tin test lên Discord |
+| POST | `/notify/test` | gửi tin test lên các account đang bật (thân body `{channel?}` để test 1 kênh) |
+| GET | `/notify/settings` | cấu hình thông báo (secret chỉ trả về "đã đặt") |
+| POST | `/notify/settings` | lưu cấu hình vào `backend/notify.yaml`: rules + danh sách account |
 
 Thời gian: mọi timestamp trong API là ISO-8601 UTC (`...Z`); nến dùng unix seconds (đúng định dạng lightweight-charts).
 
@@ -105,7 +107,7 @@ Thời gian: mọi timestamp trong API là ISO-8601 UTC (`...Z`); nến dùng un
 cd backend
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env        # điền OPENROUTER_API_KEY, DISCORD_WEBHOOK_URL
+cp .env.example .env        # điền OPENROUTER_API_KEY, DISCORD_WEBHOOK_URL (tuỳ chọn: TELEGRAM_*)
 uvicorn app.main:app --reload --port 8000 --timeout-graceful-shutdown 3
 
 # frontend

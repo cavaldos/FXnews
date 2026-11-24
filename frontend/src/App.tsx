@@ -23,6 +23,8 @@ import { CalendarPage } from './pages/CalendarPage'
 import { DataPage } from './pages/DataPage'
 import LlmLabPage from './pages/LlmLabPage'
 import { MemoryPage } from './pages/MemoryPage'
+import { NotificationsPage } from './pages/NotificationsPage'
+import { VibeLabPage } from './pages/VibeLabPage'
 import { fmtTime, toMs } from './lib/format'
 import { isRelated, itemTime, mergeNews, sortNewest, sortOldest } from './lib/news'
 
@@ -289,8 +291,10 @@ export default function App() {
       {page === 'calendar' ? <CalendarPage onSelect={setSelectedNews} calendarRev={calendarRev} /> : null}
       {page === 'backtest' ? <BacktestPage /> : null}
       {page === 'llm' ? <LlmLabPage /> : null}
+      {page === 'vibe' ? <VibeLabPage /> : null}
       {page === 'memory' ? <MemoryPage /> : null}
       {page === 'data' ? <DataPage /> : null}
+      {page === 'notifications' ? <NotificationsPage /> : null}
 
       {page === 'dashboard' ? (
       <main className="grid">

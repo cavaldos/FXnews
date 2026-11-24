@@ -35,6 +35,7 @@ class Scheduler:
                                       ingest.seconds_until_calendar_due())),
             asyncio.create_task(_loop("rss", max(60.0, s.rss_poll_minutes * 60), ingest.run_rss_cycle, 5)),
             asyncio.create_task(_loop("pre_event", 60.0, ingest.run_pre_event_cycle, 20)),
+            asyncio.create_task(_loop("notify", 60.0, ingest.run_pre_event_notify_cycle, 30)),
         ]
         log.info("scheduler started (%d jobs)", len(self._tasks))
 

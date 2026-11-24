@@ -452,7 +452,8 @@ class _JsonSource(_Source):
         if not isinstance(tables, dict):
             raise DataError(422, "export has no \"tables\" object")
         self.data = tables
-        self.schema = data.get("schema") if isinstance(data.get("schema"), dict) else {}
+        schema = data.get("schema")
+        self.schema: dict[str, Any] = schema if isinstance(schema, dict) else {}
         for name, rows in tables.items():
             if not isinstance(rows, list):
                 raise DataError(422, f"table {name!r} must be a list of rows")
@@ -727,18 +728,21 @@ def _merge(conn: Connection, source: _Source, selected: list[str], report: _Repo
             if hit is not None:
                 if old_id is not None:
                     tmap[old_id] = hit[0]
-                newer = spec.ts_col is not None and row.get(spec.ts_col) is not None and (hit[1] is None or row[spec.ts_col] > hit[1])
-                if write and newer:
+                ts = spec.ts_col
+                value = row.get(ts) if ts is not None else None
+                newer = ts is not None and value is not None and (hit[1] is None or value > hit[1])
+                if newer and rep is not None:  # rep is not None exactly when write
                     conn.execute(update(table).where(table.c.id == hit[0]).values(**row))
-                    existing[key] = (hit[0], row[spec.ts_col])
+                    existing[key] = (hit[0], value)
                     rep["updated"] += 1
                     new_id, touched = hit[0], True
                 else:
                     if rep:
                         rep["skipped"] += 1
                     new_id, touched = hit[0], False
-            elif write:
-                new_id = conn.execute(insert(table).values(**row)).inserted_primary_key[0]
+            elif rep is not None:  # rep is not None exactly when write
+                inserted = conn.execute(insert(table).values(**row)).inserted_primary_key
+                new_id = inserted[0] if inserted is not None else 0  # a plain INSERT always has a key
                 existing[key] = (new_id, row.get(spec.ts_col) if spec.ts_col else None)
                 if old_id is not None:
                     tmap[old_id] = new_id

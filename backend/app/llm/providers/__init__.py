@@ -31,6 +31,13 @@ def create_provider(name: str, settings: Settings) -> LLMProvider:
     return factory(settings)
 
 
-from . import claude_code, groq, hive, opencode, openrouter  # noqa: E402,F401  (register themselves)
+from . import (  # noqa: E402,F401  (register themselves)
+    claude_code,
+    groq,
+    hive,
+    opencode,
+    openrouter,
+    pi,
+)
 
 __all__ = ["LLMProvider", "available", "create_provider", "register"]

@@ -67,6 +67,15 @@ def init_db() -> None:
     from app.memory import models as _memory_models  # noqa: F401
 
     Base.metadata.create_all(engine)
+    _migrate()
+
+
+def _migrate() -> None:
+    """create_all() only creates missing tables, never missing columns: add the ones added later."""
+    with engine.begin() as conn:
+        cols = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(news_items)")}
+        if "pre_event_notified" not in cols:
+            conn.exec_driver_sql("ALTER TABLE news_items ADD COLUMN pre_event_notified BOOLEAN NOT NULL DEFAULT 0")
 
 
 @contextmanager

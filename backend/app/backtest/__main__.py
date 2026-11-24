@@ -6,16 +6,16 @@ import argparse
 import asyncio
 import json
 import sys
-from datetime import UTC, datetime
+from datetime import datetime
 
 from app.config import get_settings
 from app.db import init_db, utcnow
 
 
-def _bound(value: str | None, end: bool = False):
+def _bound(value: str | None, end: bool = False) -> datetime:
     from app.routers.backtest import parse_bound
 
-    return parse_bound(value, end=end)
+    return parse_bound(value, end=end) or utcnow()
 
 
 async def _main(argv: list[str]) -> int:
@@ -34,7 +34,7 @@ async def _main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     init_db()
     start = _bound(args.start)
-    end = _bound(args.end, end=True) or utcnow()
+    end = _bound(args.end, end=True)
 
     if args.cmd == "backfill":
         from app.backtest import ingest

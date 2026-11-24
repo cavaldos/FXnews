@@ -281,6 +281,8 @@ async def _enrich_titles(client, pacer, items: list[RawNews], errors: list[str],
     failures = 0
     for item in items[:limit]:
         try:
+            if not item.url:
+                continue
             title, _ = await _page_head(client, pacer, item.url)
         except (httpx.HTTPError, SourceBlocked) as exc:
             failures += 1

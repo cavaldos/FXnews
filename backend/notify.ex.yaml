@@ -1,0 +1,32 @@
+# Notification settings of the backend (app/notify).
+# This is backend/notify.yaml (never committed: it holds the keys).
+# The Notifications page of the UI edits this file; hand edits work too
+# (no restart needed).
+
+# a new headline at or above this impact is announced on arrival
+# (High | Medium | Low)
+min_impact: "High"
+# remind this many minutes before a high-impact release (0 = off)
+pre_event_lead_minutes: 10
+# push the trade ideas the LLM produces
+notify_analyses: true
+# ... including the pre-event scenarios
+notify_pre_event: true
+# minimum confidence of a headline trade idea
+min_confidence: 60
+
+channels:
+  # one or more bots/chats; every enabled account gets every message
+  telegram:
+    accounts:
+      - name: "main"
+        enabled: true
+        bot_token: "123456:ABC-DEF..."      # from @BotFather
+        chat_id: "-1001234567890"           # from @userinfobot
+
+  # one or more webhooks; every enabled account gets every message
+  discord:
+    accounts:
+      - name: "main"
+        enabled: true
+        webhook_url: "https://discord.com/api/webhooks/..."

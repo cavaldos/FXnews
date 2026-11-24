@@ -10,6 +10,10 @@ import type {
   ModelOut,
   NewsKind,
   NewsOut,
+  NotifySettingsIn,
+  NotifySettingsOut,
+  NotifyTestOut,
+  NotifyChannel,
   QuoteOut,
   ReactionBatchItem,
   ReactionOut,
@@ -148,7 +152,11 @@ export const api = {
   reactionBatch: (items: ReactionBatchItem[], signal?: AbortSignal) =>
     request<{ results: (ReactionOut & { id: string })[] }>('POST', '/reaction/batch', { body: items, signal }),
   linkPreview: (url: string, signal?: AbortSignal) => request<LinkPreviewOut>('GET', '/link-preview', { params: { url }, signal }),
-  notifyTest: (signal?: AbortSignal) => request<unknown>('POST', '/notify/test', { signal }),
+  notifySettings: (signal?: AbortSignal) => request<NotifySettingsOut>('GET', '/notify/settings', { signal }),
+  saveNotifySettings: (body: NotifySettingsIn, signal?: AbortSignal) =>
+    request<NotifySettingsOut>('POST', '/notify/settings', { body, signal }),
+  notifyTest: (channel?: NotifyChannel, name?: string, signal?: AbortSignal) =>
+    request<NotifyTestOut>('POST', '/notify/test', { body: { channel: channel ?? null, name: name ?? null }, signal }),
 }
 
 export const STREAM_URL = `${BASE}/stream`

@@ -44,6 +44,7 @@ import hashlib
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Literal
 
 import httpx
 
@@ -115,6 +116,7 @@ def from_tv_item(item: dict, max_symbols: int) -> EventRecord | None:
         return None
     currency = (item.get("currency") or "").upper() or None
     unit, scale = item.get("unit"), item.get("scale")
+    importance = item.get("importance")
     raw_news = RawNews(kind="calendar", source="tradingview", title=title, event_time=when, currency=currency)
     currencies, symbols = map_news(raw_news, max_symbols)
     comment = item.get("comment")
@@ -123,7 +125,7 @@ def from_tv_item(item: dict, max_symbols: int) -> EventRecord | None:
         kind="calendar",
         source="tradingview",
         title=title[:500],
-        impact=_TV_IMPACT.get(item.get("importance"), "low"),
+        impact=_TV_IMPACT.get(importance if isinstance(importance, int) else 0, "low"),
         dedupe_key=_key("tvcal", item["id"]),
         currency=currency,
         country=(item.get("country") or None),
@@ -257,7 +259,8 @@ def from_dict(item: dict, max_symbols: int) -> EventRecord | None:
     title = str(item.get("title") or "").strip()
     if when is None or not title:
         return None
-    kind = item.get("kind") if item.get("kind") in ("headline", "calendar") else "headline"
+    raw_kind = item.get("kind")
+    kind: Literal["calendar", "headline"] = "calendar" if raw_kind == "calendar" else "headline"
     source = str(item.get("source") or "headline_history")[:32]
     impact = str(item.get("impact") or "").lower()
     if impact not in ("high", "medium", "low"):

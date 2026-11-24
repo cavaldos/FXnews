@@ -17,6 +17,8 @@ from app.config import get_settings
 from app.db import session_scope, utcnow
 from app.events import broadcaster
 from app.models import NewsItem
+from app.notify import config as notify_config
+from app.notify import send_news
 from app.schemas import IngestResult
 from app.services.serializers import news_out
 from app.sources.base import RawNews
@@ -92,7 +94,7 @@ async def _analyze_bg(news_id: int, kind: str) -> None:
         try:
             out = await advisor.analyze_news(news_id, kind=kind)
             failed = bool(getattr(out, "error", None))
-        except Exception:  # noqa: BLE001
+        except Exception:
             log.exception("auto analysis of news %s failed", news_id)
             failed = True
     if kind != "pre_event":
@@ -199,6 +201,7 @@ async def run_rss_cycle() -> IngestResult:
     if any(not isinstance(res, BaseException) for res in results):
         state["last_ingest_at"] = utcnow()  # health must not look fresh while every feed is failing
 
+    notified = await notify_new_items(new_ids)
     analyzed = skipped_cooldown = 0
     if settings.auto_analyze_headlines and settings.llm_enabled and new_ids:
         fresh_after = utcnow() - timedelta(minutes=HEADLINE_FRESH_MINUTES)
@@ -223,9 +226,58 @@ async def run_rss_cycle() -> IngestResult:
             _auto_llm_calls.append(_now_ts())
             _spawn(_analyze_bg(news_id, "headline"))
             analyzed += 1
-    log.info("rss: %d items, %d new, %d queued for analysis (%d skipped by cooldown)",
-             len(items), len(new_ids), analyzed, skipped_cooldown)
+    log.info("rss: %d items, %d new, %d queued for analysis (%d skipped by cooldown), %d notified",
+             len(items), len(new_ids), analyzed, skipped_cooldown, notified)
     return IngestResult(inserted=len(new_ids), analyzed=analyzed, errors=errors)
+
+
+def _has_account(cfg) -> bool:
+    """True when at least one notification account is enabled (the .env accounts count too)."""
+    return any(account.enabled for ctype in cfg.channels for account in cfg.all_accounts(ctype))
+
+
+async def notify_new_items(new_ids: list[int]) -> int:
+    """Rule 1: a new high-impact headline is announced on arrival (calendar releases are handled by the
+    pre-event reminder instead, so a whole week of events does not arrive as a burst of messages)."""
+    cfg = notify_config.load_safe()
+    if cfg is None or not new_ids or not _has_account(cfg):
+        return 0
+    min_rank = IMPACT_RANK.get(cfg.min_impact, 3)
+    with session_scope() as session:
+        rows = session.scalars(select(NewsItem).where(NewsItem.id.in_(new_ids))).all()
+        items = [news_out(r) for r in rows
+                 if r.kind == "headline" and IMPACT_RANK.get(r.impact or "", 0) >= min_rank]
+    for item in items:
+        await send_news(item)
+    return len(items)
+
+
+async def run_pre_event_notify_cycle() -> int:
+    """Rule 2: remind `pre_event_lead_minutes` before a high-impact calendar release (once per event)."""
+    cfg = notify_config.load_safe()
+    if cfg is None:
+        return 0
+    lead = cfg.pre_event_lead_minutes
+    if lead <= 0 or not _has_account(cfg):
+        return 0
+    min_rank = IMPACT_RANK.get(cfg.min_impact, 3)
+    impacts = [k for k, v in IMPACT_RANK.items() if v >= min_rank and k != "Holiday"]
+    now = utcnow()
+    with session_scope() as session:
+        rows = session.scalars(select(NewsItem).where(
+            NewsItem.kind == "calendar", NewsItem.impact.in_(impacts), NewsItem.pre_event_notified.is_(False),
+            NewsItem.event_time > now, NewsItem.event_time <= now + timedelta(minutes=lead),
+        ).order_by(NewsItem.event_time)).all()
+        groups: dict[tuple, list[NewsItem]] = {}
+        for row in rows:
+            row.pre_event_notified = True  # mark first: a slow send must not duplicate the reminder
+            groups.setdefault((row.currency, row.event_time), []).append(row)
+        items = [(news_out(g[0]), [r.title for r in g[1:]]) for g in groups.values()]
+    for item, extra_titles in items:
+        await send_news(item, extra_titles=extra_titles, reminder_minutes=lead)
+    if items:
+        log.info("pre-event reminders sent: %s", [i.title for i, _ in items])
+    return len(items)
 
 
 async def run_pre_event_cycle() -> int:

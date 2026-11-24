@@ -9,11 +9,11 @@ import respx
 from fastapi.testclient import TestClient
 
 from app.analysis import advisor, llm
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.db import init_db
 from app.main import app
 from app.notify import discord
-from app.schemas import AnalysisOut
+from app.schemas import AnalysisOut, TradeIdea
 from app.services import ingest
 from app.sources.base import RawNews
 
@@ -70,7 +70,9 @@ def test_coerce_filters_unknown_symbols_and_normalizes():
 @respx.mock
 async def test_pre_event_cycle_analyzes_grouped_event_once():
     core = RawNews(**{**cpi_event().__dict__, "title": "Core CPI m/m", "forecast": "0.2%"})
-    core.event_time = cpi_event().event_time.replace(second=0, microsecond=0)
+    core_time = cpi_event().event_time
+    assert core_time is not None
+    core.event_time = core_time.replace(second=0, microsecond=0)
     cpi = cpi_event()
     cpi.event_time = core.event_time
     new_ids, _ = ingest.store_items([cpi, core])
@@ -189,6 +191,30 @@ async def test_response_format_rejected_retries_without_it():
     assert "response_format" not in json.loads(route.calls[1].request.content)
 
 
+def test_advisor_skills_setting_parses_comma_separated_env(monkeypatch):
+    # conftest neutralizes backend/.env, so Settings() here sees only the test env + defaults
+    assert get_settings().advisor_skills == ["global-macro", "macro-analysis", "event-driven"]
+    assert get_settings().advisor_skills_max_chars == 2500
+    monkeypatch.setenv("ADVISOR_SKILLS", "global-macro, event-driven")
+    assert Settings().advisor_skills == ["global-macro", "event-driven"]
+    monkeypatch.setenv("ADVISOR_SKILLS", "")
+    assert Settings().advisor_skills == []
+
+
+@respx.mock
+async def test_skills_block_in_prompt_only_when_configured(monkeypatch):
+    route = respx.post(OPENROUTER).mock(return_value=llm_reply({"summary": "ok", "trades": []}))
+    await advisor.advise("EURUSD", question="Gold outlook?")
+    prompt = json.loads(route.calls[0].request.content)["messages"][1]["content"]
+    assert "# Reference frameworks" in prompt and "## Skill: global-macro" in prompt
+    assert "## Skill: event-driven" in prompt and "sentiment-analysis" not in prompt
+    # disabled -> the section is absent
+    monkeypatch.setattr(get_settings(), "advisor_skills", [])
+    await advisor.advise("EURUSD", question="Gold outlook again?")
+    prompt_off = json.loads(route.calls[1].request.content)["messages"][1]["content"]
+    assert "Reference frameworks" not in prompt_off and "## Skill:" not in prompt_off
+
+
 def test_model_selection_per_symbol(monkeypatch):
     s = get_settings()
     monkeypatch.setattr(s, "openrouter_symbol_models", {"XAUUSD": "anthropic/claude-sonnet-4.5"})
@@ -203,9 +229,9 @@ async def test_discord_embed_and_send(monkeypatch):
     hook = respx.post("https://discord.test/webhook").mock(side_effect=[
         httpx.Response(429, json={"retry_after": 0.01}), httpx.Response(204)])
     analysis = AnalysisOut(id=1, kind="headline", model="m", summary="USD strengthens",
-                           trades=[{"symbol": "EURUSD", "bias": "bearish", "confidence": 80, "entry_idea": "sell 1.1150"}],
+                           trades=[TradeIdea(symbol="EURUSD", bias="bearish", confidence=80, entry_idea="sell 1.1150")],
                            created_at=datetime.now(UTC))
-    assert await discord.send_analysis(analysis) is True
+    assert await discord.send_analysis(analysis, url="https://discord.test/webhook") is True
     embed = json.loads(hook.calls[1].request.content)["embeds"][0]
     assert embed["fields"][0]["name"] == "🔴 EURUSD — STRONG SELL (80%)"
     assert embed["color"] == discord.COLORS["bearish"]

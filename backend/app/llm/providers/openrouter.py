@@ -78,7 +78,9 @@ class OpenRouterProvider(OpenAICompatProvider):
 
     # ---- hooks ------------------------------------------------------------
 
-    no_key_message = NO_KEY
+    @property
+    def no_key_message(self) -> str:
+        return NO_KEY
 
     def key_problem(self, status, message, reset_at=None, now=None):
         return key_problem(status, message, reset_at, now)

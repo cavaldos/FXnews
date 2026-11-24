@@ -1,0 +1,221 @@
+/* Notifications page: channels + alert rules. Colours come only from theme tokens (see global.css). */
+.notify-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 14px 24px;
+}
+
+.notify-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.notify-panel {
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  background-image: var(--noise-img);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+
+.notify-panel-head {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-header);
+}
+
+.notify-panel-head h2 {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.notify-panel-head p {
+  margin: 3px 0 0;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.notify-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+}
+
+/* ── fields ── */
+.notify-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.notify-label {
+  font-size: var(--fs-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.notify-field input[type='text'],
+.notify-field input[type='password'],
+.notify-field input[type='number'] {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+  color-scheme: dark light;
+}
+
+.notify-field input:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 0;
+}
+
+.notify-secret {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notify-secret input {
+  flex: 1;
+  min-width: 0;
+}
+
+.notify-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--fs-md);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.notify-check input {
+  accent-color: var(--accent);
+}
+
+.notify-hint {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+.notify-error,
+.notify-ok {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: var(--fs-sm);
+  border: 1px solid;
+}
+
+.notify-error {
+  color: var(--red);
+  border-color: var(--red-soft);
+  background: var(--red-bg);
+}
+
+.notify-ok {
+  color: var(--green);
+  border-color: var(--green-soft);
+  background: var(--green-bg);
+}
+
+.notify-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ── accounts ── */
+.notify-account {
+  border: 1px solid var(--border);
+  background: var(--bg-input);
+}
+
+.notify-account-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.notify-account-type {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border: 1px solid var(--accent-dim);
+  color: var(--accent);
+}
+
+.notify-account-type.discord {
+  border-color: var(--border-bright);
+  color: var(--text-secondary);
+}
+
+.notify-account-name {
+  flex: 1;
+  min-width: 90px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--mono);
+  font-size: var(--fs-sm);
+}
+
+.notify-account-head .notify-check {
+  font-size: var(--fs-sm);
+}
+
+.notify-account-env {
+  font-family: var(--mono);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.notify-account-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px;
+}
+
+.notify-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notify-page .mono {
+  font-family: var(--mono);
+}
+
+@media (max-width: 640px) {
+  .notify-page {
+    padding: 8px 8px 20px;
+  }
+  .notify-actions button {
+    flex: 1;
+  }
+}

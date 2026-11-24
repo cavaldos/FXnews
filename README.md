@@ -65,8 +65,12 @@ environment reference.
 ### 1.5 Live delivery
 - **Server-Sent Events** at `GET /api/stream` push `news` and `analysis` events. `app/events.py` is a small in-process
   pub/sub broadcaster.
-- **Discord** webhook notifications (`app/notify/discord.py`), filtered by `NOTIFY_MIN_CONFIDENCE` and
-  `NOTIFY_PRE_EVENT`. A test endpoint is available at `POST /api/notify/test`.
+- **Discord** and **Telegram** notifications (`app/notify/`), configured in `backend/notify.yaml` (same shape as
+  `llm.yaml`): a list of named accounts per channel, every enabled account gets every message. Two rules decide
+  what is sent: a new headline at or above `min_impact`, and a reminder `pre_event_lead_minutes` before a
+  high-impact calendar release. The LLM trade ideas are filtered by `min_confidence` and `notify_pre_event`.
+  The **Notifications** page of the UI edits the file (and tests each account); `POST /api/notify/test` sends a
+  test message.
 
 ### 1.6 Market data
 - **Candles**: TradingView's chart websocket is the primary source, so candles match the chart a user sees.
@@ -135,7 +139,7 @@ persist in `localStorage`.
                          ▼
           analyses + signals (SQLite)
           ├──► events.py broadcaster → SSE /api/stream → React UI
-          └──► notify/discord.py (webhook)
+          └──► notify/ (Discord + Telegram, backend/notify.yaml)
 
  Outcome loop:  market/reaction.py + backtest/outcomes.py → bt_outcomes
                          └──► memory/ (facts only) → memory_* tables [+ Neo4j/Graphiti]
@@ -169,7 +173,7 @@ persist in `localStorage`.
 | `analysis/` | `mapping`, `rules`, `advisor` (orchestration), `llm` (OpenRouter JSON helper) |
 | `llm/` | Multi-provider client: `client.py`, `config.py`, `keys.py`, `accounts.py`, `providers/` (openrouter, groq, hive, claude_code, opencode, openai_compat) |
 | `market/` | `candles` (cache and fallbacks), `tradingview` (websocket), `symbols`, `reaction` |
-| `notify/` | Discord webhook embeds |
+| `notify/` | Discord + Telegram channels, the YAML config, the message bodies |
 | `backtest/` | `ingest`, `sources`, `headline_history`, `predict`, `outcomes`, `stats`, `jobs`, `models`, CLI |
 | `memory/` | `facts`, `store` (SQLite and Graphiti), `sync`, `view`, CLI |
 
@@ -190,7 +194,7 @@ All endpoints are under `/api`. Interactive documentation is served by FastAPI a
 
 | Area | Endpoints |
 |---|---|
-| System | `GET /api/health`, `POST /api/ingest/run`, `POST /api/notify/test`, `GET /api/stream` (SSE) |
+| System | `GET /api/health`, `POST /api/ingest/run`, `GET`/`POST` `/api/notify/settings`, `POST /api/notify/test`, `GET /api/stream` (SSE) |
 | News | `GET /api/news`, `GET /api/news/{id}`, `GET /api/calendar`, `POST /api/news/{id}/analyze` |
 | Analysis | `GET /api/signals`, `GET /api/analyses`, `GET /api/analyses/{id}`, `POST /api/advice`, `GET /api/models` |
 | Market | `GET /api/symbols`, `GET /api/candles`, `GET /api/quotes` |
@@ -317,7 +321,9 @@ Without Neo4j, memory still works on SQLite; the Memory page and Data page do no
 | Variable | Default | Purpose |
 |---|---|---|
 | `OPENROUTER_API_KEY`, `OPENROUTER_MODEL` | empty | Enables LLM analysis and sets the default model |
-| `DISCORD_WEBHOOK_URL` | empty | Enables Discord notifications |
+| `DISCORD_WEBHOOK_URL` | empty | Fallback Discord webhook (the accounts live in `backend/notify.yaml`) |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | empty | Fallback Telegram account |
+| `NOTIFY_CONFIG` | `notify.yaml` | Path of the notification YAML file |
 | `SCHEDULER_ENABLED` | `true` | Starts the background polling loops |
 | `FF_POLL_MINUTES` / `RSS_POLL_MINUTES` | `10` / `3` | Polling intervals |
 | `RSS_FEEDS` | FXStreet, CNBC | Headline sources |

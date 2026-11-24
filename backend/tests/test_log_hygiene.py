@@ -28,7 +28,7 @@ def test_httpx_and_httpcore_are_muted_by_the_app():
 
 async def test_discord_webhook_token_is_not_logged(webhook, caplog):
     with caplog.at_level(logging.DEBUG):  # root as verbose as it gets; only the app's own logger config applies
-        assert await discord.send_text("hello") is True
+        assert await discord.send_text("hello", url=WEBHOOK) is True
     assert "SECRET-WEBHOOK-TOKEN-abc" not in caplog.text
     assert not [r for r in caplog.records if r.name in ("httpx", "httpcore") and r.levelno < logging.WARNING]
 
@@ -36,5 +36,5 @@ async def test_discord_webhook_token_is_not_logged(webhook, caplog):
 async def test_control_unmuted_httpx_would_have_leaked_the_token(webhook, caplog):
     # Proves the test above can fail: with httpx at INFO the full URL (token included) is logged.
     with caplog.at_level(logging.INFO, logger="httpx"):
-        await discord.send_text("hello")
+        await discord.send_text("hello", url=WEBHOOK)
     assert "SECRET-WEBHOOK-TOKEN-abc" in caplog.text

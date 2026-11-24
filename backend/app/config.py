@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Annotated
 
-from pydantic import Field
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
@@ -62,6 +63,19 @@ class Settings(BaseSettings):
     opencode_model: str = "opencode/beam-free"  # <opencode provider>/<model>, see `opencode models`
     opencode_thinking: str = "high"  # the model's #variant ("" / off = none)
     opencode_timeout_seconds: float = 180.0
+
+    # ── Vibe-Trading sidecar (app/vibe, sidecar/vibe-trading; MCP over Streamable HTTP at <base_url>/mcp) ──
+    vibe_enabled: bool = False
+    advisor_macro_enabled: bool = False  # add a FRED macro snapshot to the advisor prompt (also needs vibe_enabled + FRED_API_KEY on the sidecar)
+    advisor_macro_ttl_minutes: int = 360
+    advisor_macro_timeout_seconds: float = 8.0
+    vibe_base_url: str = "http://127.0.0.1:8899"
+    vibe_timeout_seconds: float = 600.0  # one tool call (a backtest or a swarm start/poll); swarm runs themselves are polled
+    vibe_token: str = ""  # optional Bearer token, for a reverse proxy in front of the sidecar
+    # Where backtest run dirs are written; must be inside the sidecar's allowed run root (run.sh: sidecar/vibe-trading/runs).
+    vibe_allow_custom_code: bool = False  # strategy kind "custom" runs caller-supplied Python in the sidecar; keep off unless you trust every API caller
+    vibe_runs_keep: int = 30  # keep only the newest N nt-* run dirs under vibe_runs_dir
+    vibe_runs_dir: str = str(BACKEND_DIR.parent / "sidecar" / "vibe-trading" / "runs")
 
     # ── Data import / export (app/services/datastore.py) ──
     data_import_max_mb: int = 500  # largest accepted import upload
@@ -127,6 +141,13 @@ class Settings(BaseSettings):
     memory_recall_enabled: bool = True  # feed similar past reactions (facts only) into the advisor prompt
     memory_recall_per_symbol: int = 4
 
+    # ── Advisor prompt knowledge (vendored Vibe-Trading skills, app/analysis/skills) ──
+    # Skill names injected into the advisor LLM prompt as background "Reference frameworks";
+    # empty list disables the section. Env accepts a comma-separated list (ADVISOR_SKILLS=event-driven,smc);
+    # NoDecode stops pydantic-settings from JSON-parsing the env string before the validator splits it.
+    advisor_skills: Annotated[list[str], NoDecode] = ["global-macro", "macro-analysis", "event-driven"]
+    advisor_skills_max_chars: int = 2500  # per skill in the prompt
+
     # ── Market data ──
     # TradingView (public websocket, no key) is primary so candles match the TradingView chart exactly.
     tradingview_enabled: bool = True
@@ -137,6 +158,11 @@ class Settings(BaseSettings):
 
     # ── Discord ──
     discord_webhook_url: str = ""
+    # ── Telegram (bot + chat id); the UI can set both at runtime ──
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    # Notification channels and rules live in backend/notify.yaml (NOTIFY_CONFIG: path to it).
+    notify_config: str = ""
     notify_min_confidence: int = 60  # only push trade ideas with confidence >= this
     notify_pre_event: bool = True
 
@@ -161,6 +187,14 @@ class Settings(BaseSettings):
     max_auto_llm_calls_per_hour: int = 20
     watch_currencies: list[str] = ["USD", "EUR", "GBP", "JPY", "AUD", "NZD", "CAD", "CHF", "XAU"]
 
+    @field_validator("advisor_skills", mode="before")
+    @classmethod
+    def _split_advisor_skills(cls, value):
+        # env may be a comma-separated string; JSON arrays (the pydantic default) still work
+        if isinstance(value, str):
+            return [v.strip() for v in value.split(",") if v.strip()]
+        return value
+
     @property
     def llm_enabled(self) -> bool:
         return bool(self.openrouter_api_key)
@@ -168,6 +202,10 @@ class Settings(BaseSettings):
     @property
     def discord_enabled(self) -> bool:
         return bool(self.discord_webhook_url)
+
+    @property
+    def telegram_enabled(self) -> bool:
+        return bool(self.telegram_bot_token and self.telegram_chat_id)
 
     def model_for(self, symbol: str | None = None, override: str | None = None) -> str:
         if override:

@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 from datetime import UTC, datetime, timedelta
 
 from pydantic import ValidationError
@@ -12,14 +13,16 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.analysis import llm, rules
+from app.analysis.macro_context import macro_suffix
 from app.analysis.mapping import symbol_sign
+from app.analysis.skills import skills_block
 from app.config import get_settings
 from app.db import session_scope, utcnow
 from app.events import broadcaster
-from app.memory.recall import memory_block
 from app.market.symbols import SYMBOLS, get_symbol
+from app.memory.recall import memory_block
 from app.models import Analysis, NewsItem, Signal
-from app.schemas import AnalysisOut, CurrencyImpact, Scenario, TradeIdea
+from app.schemas import AnalysisOut, Bias, CurrencyImpact, Scenario, TradeIdea
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +54,19 @@ Rules:
 
 
 # ── context helpers ──────────────────────────────────────────────────
+
+
+def _reference_frameworks() -> str:
+    """Vendored skill knowledge appended to the user prompt ("" when disabled). Background only:
+    the system prompt's schema and rules stay authoritative."""
+    settings = get_settings()
+    if not settings.advisor_skills:
+        return ""
+    body = skills_block(settings.advisor_skills, settings.advisor_skills_max_chars)
+    if not body:
+        return ""
+    return ("\n\n# Reference frameworks — background knowledge only; the schema and rules above stay authoritative.\n\n"
+            + body)
 
 
 def _past_reactions(session: Session, query: str, symbols: list[str]) -> list[str]:
@@ -107,7 +123,7 @@ def calendar_window(session: Session, currencies: list[str], *, hours_back: int 
                                       NewsItem.event_time >= now - timedelta(hours=hours_back))
                            .order_by(NewsItem.event_time.desc()).limit(limit)).all() if hours_back else []
     n_up = min(len(upcoming), max(limit - len(past), (limit + 1) // 2))
-    chosen = upcoming[:n_up] + past[: limit - n_up]
+    chosen = [*upcoming[:n_up], *past[: limit - n_up]]
     return [_news_line(n) for n in sorted(chosen, key=lambda n: n.event_time)]
 
 
@@ -125,7 +141,8 @@ async def price_context(symbol: str, interval: str = "15m", bars: int = 96) -> d
     if len(candles) < 5:
         return None
     digits = SYMBOLS[symbol].digits if symbol in SYMBOLS else 5
-    trs = [max(c.high - c.low, abs(c.high - p.close), abs(c.low - p.close)) for p, c in zip(candles, candles[1:])]
+    trs = [max(c.high - c.low, abs(c.high - p.close), abs(c.low - p.close))
+           for p, c in zip(candles, candles[1:], strict=False)]
     atr = sum(trs[-14:]) / len(trs[-14:])
     last, first = candles[-1].close, candles[0].close
     return {
@@ -159,7 +176,7 @@ def _sign_table(symbols: list[str], currencies: list[str]) -> list[str]:
 # ── LLM output coercion ──────────────────────────────────────────────
 
 
-def _norm_bias(value) -> str:
+def _norm_bias(value) -> Bias:
     v = str(value or "").strip().lower()
     if v in {"bullish", "buy", "long", "up"}:
         return "bullish"
@@ -185,11 +202,11 @@ def _confidence(value) -> int:
         c = float(str(value).strip().rstrip("%")) if value not in (None, "") else 0.0
     except (TypeError, ValueError):
         return 0
-    if c != c or c in (float("inf"), float("-inf")):  # NaN / inf
+    if math.isnan(c) or math.isinf(c):  # NaN / inf
         return 0
     if 0 < c <= 1 and not (isinstance(value, str) and value.strip().endswith("%")):
         c *= 100
-    return max(0, min(100, int(round(c))))
+    return max(0, min(100, round(c)))
 
 
 def coerce_llm_output(data: dict, allowed_symbols: list[str]) -> dict:
@@ -212,10 +229,12 @@ def coerce_llm_output(data: dict, allowed_symbols: list[str]) -> dict:
         if not isinstance(c, dict):
             continue
         direction = str(c.get("direction") or "neutral").lower()
+        if direction not in ("stronger", "weaker"):
+            direction = "neutral"
         try:
             impacts.append(CurrencyImpact(
                 currency=str(c.get("currency") or "").upper()[:4],
-                direction=direction if direction in {"stronger", "weaker"} else "neutral",
+                direction=direction,
                 strength=max(0.0, min(1.0, float(c.get("strength") or 0))),
             ))
         except (ValidationError, TypeError, ValueError):
@@ -261,30 +280,42 @@ def _save(session: Session, *, kind: str, news: list[NewsItem], symbol: str | No
 
 
 def _should_notify(kind: str, parsed: dict, error: str | None) -> bool:
-    settings = get_settings()
-    if error:  # don't push "LLM unavailable" noise to Discord; the UI still shows it
+    from app.notify import (
+        config as notify_config,  # local import keeps notify optional during tests
+    )
+
+    cfg = notify_config.load_safe()
+    if cfg is None:
+        return False
+    if error:  # don't push "LLM unavailable" noise to the channels; the UI still shows it
+        return False
+    if not cfg.notify_analyses:
         return False
     if kind == "pre_event":
-        return settings.notify_pre_event
+        return cfg.notify_pre_event
     if kind == "headline":
-        return any(t["bias"] != "neutral" and t["confidence"] >= settings.notify_min_confidence for t in parsed["trades"])
+        return any(t["bias"] != "neutral" and t["confidence"] >= cfg.min_confidence for t in parsed["trades"])
     return False
 
 
 _notify_tasks: set[asyncio.Task] = set()
 
 
-async def _notify_discord(out: AnalysisOut, news_out, extra_titles: list[str]) -> None:
-    from app.notify import discord  # local import keeps notify optional during tests
+async def _notify(out: AnalysisOut, news_out, extra_titles: list[str]) -> None:
+    from app.notify import (
+        send_analysis,  # local import keeps notify optional during tests
+    )
 
     try:
-        sent = await discord.send_analysis(out, news_out, extra_titles=extra_titles)
-    except Exception as exc:  # noqa: BLE001 - never fail an analysis because Discord is down
-        log.warning("Discord notify failed: %s", exc)
+        sent = await send_analysis(out, news_out, extra_titles=extra_titles)
+    except Exception as exc:  # noqa: BLE001 - never fail an analysis because a channel is down
+        log.warning("Notification failed: %s", exc)
         return
     if sent:
         with session_scope() as session:
-            session.get(Analysis, out.id).notified = True
+            row = session.get(Analysis, out.id)
+            if row is not None:
+                row.notified = True
         broadcaster.publish("analysis", out.model_copy(update={"notified": True}))
 
 
@@ -294,14 +325,14 @@ async def _finish(analysis_id: int, kind: str, parsed: dict, news_titles: list[s
     with session_scope() as session:
         row = session.get(Analysis, analysis_id)
         out = AnalysisOut.model_validate(row)
-        news = session.get(NewsItem, row.news_id) if row.news_id else None
+        news = session.get(NewsItem, row.news_id) if row and row.news_id else None
         news_out = to_news_out(news) if news is not None else None
 
-    # UI first; Discord (slow, may back off on 429) runs in the background.
+    # UI first; the channels (slow, may back off on 429) run in the background.
     broadcaster.publish("analysis", out)
     want = _should_notify(kind, parsed, out.error) if notify is None else notify
-    if want and get_settings().discord_enabled:
-        task = asyncio.create_task(_notify_discord(out, news_out, news_titles[1:]))
+    if want:
+        task = asyncio.create_task(_notify(out, news_out, news_titles[1:]))
         _notify_tasks.add(task)
         task.add_done_callback(_notify_tasks.discard)
     return out
@@ -379,7 +410,9 @@ async def _analyze_news(news_id: int, *, model: str | None, kind: str | None, no
     context["PRICE_CONTEXT"] = [pc for sym in allowed[:3] if (pc := await price_context(sym))]
 
     model_id = settings.model_for(allowed[0], model)
-    user_msg = "Analyze the news below and return JSON following the schema.\n" + json.dumps(context, ensure_ascii=False, indent=1)
+    user_msg = ("Analyze the news below and return JSON following the schema.\n"
+                + json.dumps(context, ensure_ascii=False, indent=1) + _reference_frameworks()
+                + await macro_suffix(currencies))
     parsed, error, latency, raw, source = await _run_llm(model_id, user_msg, allowed)
     if parsed is None:
         prior = context["rule_prior_primary_symbol"]["bias"] or "neutral"
@@ -391,7 +424,8 @@ async def _analyze_news(news_id: int, *, model: str | None, kind: str | None, no
         model_id = "rules"
 
     with session_scope() as session:
-        group_rows = [session.get(NewsItem, n_id) for n_id in [news_id] + [g.id for g in group[1:]]]
+        group_rows = [r for r in (session.get(NewsItem, n_id) for n_id in [news_id] + [g.id for g in group[1:]])
+                      if r is not None]
         analysis = _save(session, kind=kind, news=group_rows, symbol=None, model=model_id, parsed=parsed,
                          question=None, error=error, latency_ms=latency, raw_response=raw, source=source)
         analysis_id = analysis.id
@@ -432,7 +466,8 @@ async def advise(symbol: str, *, question: str | None = None, model: str | None 
                                               await price_context(info.symbol, "1h", 72)) if pc]
     model_id = settings.model_for(info.symbol, model)
     user_msg = ("Answer the trader's question and return JSON following the schema (the main answer goes in summary).\n"
-                + json.dumps(context, ensure_ascii=False, indent=1))
+                + json.dumps(context, ensure_ascii=False, indent=1) + _reference_frameworks()
+                + await macro_suffix(currencies))
     parsed, error, latency, raw, source = await _run_llm(model_id, user_msg, [info.symbol])
     if parsed is None:
         parsed = {"summary": f"LLM unavailable: {error}", "currency_impact": [], "trades": [],

@@ -1,4 +1,4 @@
-"""Discord webhook notifications (no-op when DISCORD_WEBHOOK_URL is empty)."""
+"""Discord webhook notifications (one account = one webhook)."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import logging
 import httpx
 
 from app.analysis.rules import recommended_action
-from app.config import get_settings
+from app.notify import messages
 from app.schemas import AnalysisOut, NewsOut
 
 log = logging.getLogger(__name__)
@@ -129,8 +129,7 @@ def build_embed(analysis: AnalysisOut, news: NewsOut | None = None, extra_titles
     return fit_embed(embed)
 
 
-async def _post(payload: dict) -> bool:
-    url = get_settings().discord_webhook_url
+async def _post(payload: dict, url: str) -> bool:
     if not url:
         return False
     async with httpx.AsyncClient(timeout=15) as client:
@@ -150,9 +149,16 @@ async def _post(payload: dict) -> bool:
     return False
 
 
-async def send_analysis(analysis: AnalysisOut, news: NewsOut | None = None, extra_titles: list[str] | None = None) -> bool:
-    return await _post({"username": "FXNews", "embeds": [build_embed(analysis, news, extra_titles)]})
+async def send_analysis(analysis: AnalysisOut, news: NewsOut | None = None, extra_titles: list[str] | None = None,
+                        *, url: str) -> bool:
+    return await _post({"username": "FXNews", "embeds": [build_embed(analysis, news, extra_titles)]}, url)
 
 
-async def send_text(content: str) -> bool:
-    return await _post({"username": "FXNews", "content": _cut(content, 2000)})
+async def send_news(news: NewsOut, extra_titles: list[str] | None = None, reminder_minutes: int | None = None,
+                    *, url: str) -> bool:
+    return await _post({"username": "FXNews", "embeds": [messages.news_embed(news, extra_titles, reminder_minutes)]},
+                       url)
+
+
+async def send_text(content: str, *, url: str) -> bool:
+    return await _post({"username": "FXNews", "content": _cut(content, 2000)}, url)

@@ -32,9 +32,9 @@ def calls(monkeypatch):
         count["analyze"] += 1
         return AnalysisOut(id=1, kind="headline", model="m", summary="ok", created_at=datetime.now(UTC))
 
-    async def send_text(_content):
+    async def send_text(_content, *, url=None):
         count["notify"] += 1
-        return True
+        return {"discord:main": True}
 
     monkeypatch.setattr(ingest, "run_all", run_all)
     monkeypatch.setattr(advisor, "analyze_news", analyze_news)

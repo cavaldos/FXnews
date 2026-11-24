@@ -11,7 +11,7 @@ from typing import Literal
 
 from app.analysis.mapping import PAIR_RE, PROXY_SIGN, currency_positions, symbol_sign
 from app.market.symbols import SYMBOLS
-from app.schemas import TradeIdea
+from app.schemas import Bias, TradeIdea
 
 Strength = Literal["stronger", "weaker"]
 
@@ -117,7 +117,7 @@ def clause_strength(clause: str) -> Strength | None:
     return headline_strength(clause)
 
 
-def bias_from_strength(symbol: str, currency: str, strength: Strength | None) -> str:
+def bias_from_strength(symbol: str, currency: str, strength: Strength | None) -> Bias:
     if not strength:
         return "neutral"
     sign = symbol_sign(symbol, currency)
@@ -127,7 +127,7 @@ def bias_from_strength(symbol: str, currency: str, strength: Strength | None) ->
     return "bullish" if up else "bearish"
 
 
-def price_action_bias(title: str) -> str:
+def price_action_bias(title: str) -> Bias:
     up, down = bool(_UP.search(title or "")), bool(_DOWN.search(title or ""))
     if up and not down:
         return "bullish"
@@ -137,7 +137,7 @@ def price_action_bias(title: str) -> str:
 
 
 def rule_bias(*, kind: str, title: str, summary: str | None, currencies: list[str], symbols: list[str],
-              actual: str | None = None, forecast: str | None = None, explicit_pair: bool = False) -> str:
+              actual: str | None = None, forecast: str | None = None, explicit_pair: bool = False) -> Bias:
     """Bias for the primary (first) symbol.
 
     Headlines are scored on the TITLE only, clause by clause: each currency mentioned in the title
@@ -151,7 +151,7 @@ def rule_bias(*, kind: str, title: str, summary: str | None, currencies: list[st
         return bias_from_strength(primary, currencies[0], surprise_direction(title, actual, forecast)) if currencies else "neutral"
 
     title = title or ""
-    votes: set[str] = set()
+    votes: set[Bias] = set()
     pair_spans: list[tuple[int, int]] = []
     for m in PAIR_RE.finditer(title):
         sym = f"{m.group(1)}{m.group(2)}"
@@ -162,7 +162,7 @@ def rule_bias(*, kind: str, title: str, summary: str | None, currencies: list[st
             pa = price_action_bias(clause_at(title, m.start()))
             if pa != "neutral":
                 votes.add(pa)
-    proxy_votes: set[str] = set()
+    proxy_votes: set[Bias] = set()
     for currency, pos in currency_positions(title).items():
         if any(start <= pos < end for start, end in pair_spans):
             continue  # already counted as pair price action
@@ -174,7 +174,7 @@ def rule_bias(*, kind: str, title: str, summary: str | None, currencies: list[st
     return votes.pop() if len(votes) == 1 else "neutral"
 
 
-def fallback_trades(symbols: list[str], currency: str | None, bias_primary: str, impact: str | None) -> list[TradeIdea]:
+def fallback_trades(symbols: list[str], currency: str | None, bias_primary: Bias, impact: str | None) -> list[TradeIdea]:
     """Low-confidence ideas when the LLM is unavailable: propagate the primary bias via currency signs."""
     if bias_primary == "neutral" or not symbols:
         return []
@@ -193,7 +193,7 @@ def fallback_trades(symbols: list[str], currency: str | None, bias_primary: str,
     return ideas
 
 
-def recommended_action(bias: str, confidence: int) -> str:
+def recommended_action(bias: Bias, confidence: int) -> str:
     if bias == "bullish":
         return "STRONG BUY" if confidence >= 75 else "BUY"
     if bias == "bearish":

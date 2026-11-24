@@ -222,7 +222,7 @@ class OpenCodeProvider(LLMProvider):
         images = [img for m in req.messages for img in m.images]
         if images and not image_dir:
             raise BadInput("the OpenCode provider needs an image_dir to attach images")
-        files = [self._write_image(img, image_dir, i) for i, img in enumerate(images)] if images else []
+        files = [self._write_image(img, image_dir, i) for i, img in enumerate(images)] if images and image_dir else []
         message = self.build_message(req)
         model = self.model_arg(req)
         if not model:
@@ -321,7 +321,9 @@ class OpenCodeProvider(LLMProvider):
             if not isinstance(event, dict):
                 continue
             session = event.get("sessionID") or session
-            part = event.get("part") if isinstance(event.get("part"), dict) else {}
+            part = event.get("part")
+            if not isinstance(part, dict):
+                part = {}
             kind = event.get("type")
             if kind == "text" and part.get("text"):
                 answer.append(str(part["text"]))
@@ -335,7 +337,9 @@ class OpenCodeProvider(LLMProvider):
                 t = part.get("tokens")
                 if isinstance(t, dict):
                     seen_tokens = True
-                    cache = t.get("cache") if isinstance(t.get("cache"), dict) else {}
+                    cache = t.get("cache")
+                    if not isinstance(cache, dict):
+                        cache = {}
                     tokens["input"] += int(t.get("input") or 0)
                     tokens["output"] += int(t.get("output") or 0)
                     tokens["reasoning"] += int(t.get("reasoning") or 0)
@@ -375,9 +379,13 @@ class OpenCodeProvider(LLMProvider):
 
     def _error(self, error: dict[str, Any]) -> LLMError:
         kind = str(error.get("type") or error.get("name") or "")
-        data = error.get("data") if isinstance(error.get("data"), dict) else {}
+        data = error.get("data")
+        if not isinstance(data, dict):
+            data = {}
         message = " ".join(str(error.get("message") or data.get("message") or kind or "error").split())[:300]
-        response = error.get("response") if isinstance(error.get("response"), dict) else {}
+        response = error.get("response")
+        if not isinstance(response, dict):
+            response = {}
         status = error.get("status") or data.get("statusCode") or response.get("status")
         if not isinstance(status, int):
             status = _ERROR_STATUS.get(kind)

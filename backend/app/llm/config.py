@@ -244,16 +244,18 @@ def _parse_accounts(provider: str, value: Any, where: str) -> list[dict[str, str
 def _check_thinking(provider: str, value: str, where: str) -> None:
     from .providers import _REGISTRY  # noqa: PLC0415
 
-    levels = tuple(getattr(_REGISTRY.get(provider), "thinking_levels", ()) or ())
+    levels = tuple(str(v) for v in getattr(_REGISTRY.get(provider), "thinking_levels", ()) or ())
     if not levels:
         return
-    allowed = ("", *levels, *(("off",) if provider == "claude_code" else ()))
+    off: tuple[str, ...] = ("off",) if provider == "claude_code" else ()
+    allowed = ("", *levels, *off)
     if value.lower() not in allowed:
         raise ConfigError(f"{where} must be one of {', '.join(repr(a) for a in allowed)}, got {value!r}")
 
 
 def _number(value: Any, where: str, integer: bool = False, minimum: float = 0.0) -> Any:
     ok = isinstance(value, (int, float)) and not isinstance(value, bool)
+    number: Any = 0
     if ok:
         number = int(value) if integer else float(value)
         if integer and float(value) != number:

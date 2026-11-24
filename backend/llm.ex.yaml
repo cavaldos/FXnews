@@ -55,3 +55,24 @@ providers:
     thinking: "high"           # the model's #variant: "low" | "medium" | "high" | ... | "" / "off" = none
     # isolated: true           # false = also load this machine's opencode plugins / MCP / skills / AGENTS.md
     # bin: opencode            # path of the CLI (~/.bun/bin/opencode is also tried)
+
+  pi:                          # pi CLI (`pi --print`) with this
+                               # machine's pi logins: no key
+    model: ""                  # pi --model pattern, e.g.
+                               # "google/gemini-3-pro"; "" = pi's default
+                               # (`pi --list-models` lists them)
+    thinking: ""               # --thinking: off | minimal | low | medium
+                               # | high | xhigh | max | "" = the default
+    # system_prompt: "You are a helpful assistant."
+                               # fallback when the request has no system message
+    # timeout: 180             # seconds per request
+    # bin: pi                  # path of the CLI
+    flags:                     # each defaults to true
+                               # set false to turn one off
+      no_extensions: true      # -ne
+      no_skills: true          # -ns
+      no_prompt_templates: true  # -np
+      no_context_files: true   # -nc
+      no_mcp: true
+      no_tools: true
+      no_themes: true

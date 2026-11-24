@@ -11,6 +11,7 @@ from collections import defaultdict
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from typing import Literal, cast
 
 from sqlalchemy import select
 
@@ -72,7 +73,8 @@ def _stored_news(start: datetime, end: datetime, kinds: tuple[str, ...]) -> list
             select(NewsItem).where(NewsItem.event_time >= start, NewsItem.event_time < end, NewsItem.kind.in_(kinds))
         ).all()
         return [
-            RawNews(kind=r.kind, source=r.source, title=r.title, event_time=r.event_time, url=r.url, summary=r.summary,
+            RawNews(kind=cast(Literal["calendar", "headline"], r.kind), source=r.source, title=r.title,
+                    event_time=r.event_time, url=r.url, summary=r.summary,
                     currency=r.currency, impact=r.impact, actual=r.actual, forecast=r.forecast, previous=r.previous,
                     raw=r.raw or {})
             for r in rows
@@ -122,7 +124,7 @@ async def collect_events(start: datetime, end: datetime, result: BackfillResult,
 
     # ForexFactory is only a fallback for the calendar: TradingView has history and actuals, FF does not.
     if not tv_events:
-        stored = [i for i in _stored_news(start, end, ("calendar",))]
+        stored = list(_stored_news(start, end, ("calendar",)))
         if live:
             try:
                 from app.sources.forexfactory import ForexFactorySource
@@ -138,7 +140,7 @@ async def collect_events(start: datetime, end: datetime, result: BackfillResult,
 
         feeds = build_rss_sources(settings)
         fetched = await asyncio.gather(*(f.fetch() for f in feeds), return_exceptions=True)
-        for feed, res in zip(feeds, fetched):
+        for feed, res in zip(feeds, fetched, strict=False):
             if isinstance(res, BaseException):
                 result.errors.append(f"rss {feed.name}: {res}")
             else:
@@ -303,7 +305,7 @@ async def compute_outcomes(start: datetime, end: datetime, result: BackfillResul
                     if old is not None and not force:
                         existing_step[(ev.id, sym)] = INTERVAL_SECONDS.get(old.interval, 10**9)
 
-    kinds = {s: (get_symbol(s).kind if get_symbol(s) else None) for s in todo}
+    kinds = {s: (info.kind if (info := get_symbol(s)) else None) for s in todo}
     fetched_any = False
     for sym, items in todo.items():
         pending = list(items)
@@ -317,7 +319,7 @@ async def compute_outcomes(start: datetime, end: datetime, result: BackfillResul
             fetched_any = True
             try:
                 candles = await _fetch_with_retry(fetcher, sym, interval)
-            except Exception as exc:  # noqa: BLE001 - one symbol failing must not stop the others
+            except Exception as exc:  # one symbol failing must not stop the others
                 log.warning("backtest: %s candles for %s failed: %s", interval, sym, exc)
                 result.errors.append(f"candles {sym} {interval}: {exc}"[:240])
                 result.symbols_without_candles.append(sym)
@@ -325,7 +327,8 @@ async def compute_outcomes(start: datetime, end: datetime, result: BackfillResul
                 pending = []
                 break
             source = getattr(candles, "source", None)
-            candles = list(getattr(candles, "candles", candles))
+            series = getattr(candles, "candles", None)
+            candles = list(series) if isinstance(series, list) else list(cast(list, candles))
             if not candles:
                 continue  # nothing at this interval: a coarser one may still have data
             any_candles = True

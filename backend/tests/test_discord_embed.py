@@ -104,6 +104,6 @@ def test_fit_embed_worst_case_everything_at_its_maximum():
 async def test_the_payload_actually_sent_is_within_the_limit(monkeypatch):
     monkeypatch.setattr(get_settings(), "discord_webhook_url", "https://discord.test/hook")
     hook = respx.post("https://discord.test/hook").mock(return_value=httpx.Response(204))
-    assert await discord.send_analysis(huge_analysis("😀"), news()) is True
+    assert await discord.send_analysis(huge_analysis("😀"), news(), url="https://discord.test/hook") is True
     sent = json.loads(hook.calls[0].request.content)["embeds"][0]
     assert utf16(sent) <= LIMIT

@@ -154,8 +154,64 @@ export interface HealthOut {
   version: string
   llm_enabled: boolean
   discord_enabled: boolean
+  telegram_enabled?: boolean
   default_model: string
   last_ingest_at?: string | null
+}
+
+// ── notifications (GET/POST /api/notify/settings) ─────────────────────
+
+export interface NotifyRules {
+  min_impact: Impact
+  pre_event_lead_minutes: number
+  notify_analyses: boolean
+  notify_pre_event: boolean
+  min_confidence: number
+}
+
+export type NotifyChannel = 'telegram' | 'discord'
+
+export interface NotifyAccount {
+  /** "<channel>:<name>" */
+  id: string
+  channel: NotifyChannel
+  name: string
+  enabled: boolean
+  chat_id: string
+  /** The secret is stored in backend/notify.yaml and never sent back to the browser. */
+  secret_set: boolean
+  /** "file" = backend/notify.yaml, "env" = the .env fallback (not written to the file). */
+  source: 'file' | 'env'
+}
+
+export interface NotifySettingsOut {
+  rules: NotifyRules
+  accounts: NotifyAccount[]
+  /** The YAML file the settings come from ("" = none yet). */
+  file: string
+}
+
+/** Partial update: a secret left out keeps its value, a secret set to '' is cleared. */
+export interface NotifyAccountIn {
+  /** The id of the stored account (so renaming it keeps its secret). */
+  id?: string
+  channel: NotifyChannel
+  name: string
+  enabled: boolean
+  chat_id?: string
+  bot_token?: string | null
+  webhook_url?: string | null
+  source?: 'file' | 'env'
+}
+
+export interface NotifySettingsIn {
+  rules?: Partial<NotifyRules>
+  accounts?: NotifyAccountIn[]
+}
+
+export interface NotifyTestOut {
+  sent: boolean
+  accounts: Record<string, boolean>
 }
 
 export interface IngestResult {

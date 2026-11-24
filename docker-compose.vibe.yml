@@ -1,0 +1,42 @@
+# Optional alternative to sidecar/vibe-trading/run.sh: run Vibe-Trading
+# from its own Docker image.
+#   git clone --depth 1 --branch v0.1.19 \
+#     https://github.com/HKUDS/Vibe-Trading.git sidecar/vibe-trading/src
+#   cp sidecar/vibe-trading/.env.example sidecar/vibe-trading/.env
+#   # fill in keys
+#   docker compose -f docker-compose.vibe.yml up -d --build
+# Serves the MCP Streamable HTTP endpoint on 127.0.0.1:8899/mcp. Note:
+# with Docker the backtest run_dir is created by the backend on the HOST,
+# so mount the same folder (below) and set VIBE_RUNS_DIR to its host path.
+services:
+  vibe-mcp:
+    build:
+      context: ./sidecar/vibe-trading/src
+    command:
+      - "vibe-trading-mcp"
+      - "--transport"
+      - "http"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8899"
+    ports:
+      - "127.0.0.1:8899:8899"
+    env_file:
+      - ./sidecar/vibe-trading/.env
+    environment:
+      - VIBE_TRADING_ENABLE_SHELL_TOOLS=0
+      - VIBE_TRADING_ALLOWED_RUN_ROOTS=/vibe-runs
+      # The MCP server only accepts loopback Host headers by default;
+      # allow the published port's Host.
+      - VIBE_TRADING_MCP_ALLOWED_HOSTS=127.0.0.1,localhost
+    volumes:
+      - ./sidecar/vibe-trading/runs:/vibe-runs
+      - vibe-home:/home/vibe/.vibe-trading
+    cap_drop: [ALL]
+    cap_add: [SETUID, SETGID]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 4g
+    restart: unless-stopped
+volumes:
+  vibe-home:

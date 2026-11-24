@@ -14,14 +14,13 @@ answers.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import ColumnElement, delete, or_, select
 
 from app.analysis.llm import extract_json
 from app.backtest.ingest import utc
@@ -68,7 +67,7 @@ def load_context(event: BtEvent, *, now: datetime | None = None) -> list[Context
     now = utc(now or utcnow())
     release = utc(event.time)
     floor = release - timedelta(hours=settings.backtest_prompt_context_hours)
-    related = [BtEvent.symbols_csv.like(f"%,{s},%") for s in event.symbols]
+    related: list[ColumnElement[bool]] = [BtEvent.symbols_csv.like(f"%,{s},%") for s in event.symbols]
     if event.currency:
         related.append(BtEvent.currency == event.currency)
     if not related:
@@ -120,7 +119,8 @@ def build_prompt(event: BtEvent, symbols: list[str], horizon: str, context: list
         "",
         'Reply as JSON: {"predictions": [{"symbol": "<SYMBOL>", "direction": "up|down|flat", "confidence": <0-100>, '
         f'"horizon": "{horizon}", "reasoning": "<one or two sentences>"}}, ...]}}',
-        'Use "flat" when you expect no meaningful move. Confidence is your probability (0-100) that the direction is right.',
+        'Use "flat" when you expect no meaningful move. '
+        'Confidence is your probability (0-100) that the direction is right.',
     ]
     return "\n".join(lines)
 
@@ -137,7 +137,7 @@ def parse_predictions(text: str, symbols: list[str], horizon: str) -> list[dict]
     if items is None and "direction" in data:  # a single bare prediction
         items = [data]
     if not isinstance(items, list):
-        raise ValueError("no 'predictions' list in the reply")
+        raise TypeError("no 'predictions' list in the reply")
     wanted = {s.upper() for s in symbols}
     out: dict[str, dict] = {}
     for item in items:
@@ -148,7 +148,7 @@ def parse_predictions(text: str, symbols: list[str], horizon: str) -> list[dict]
         if symbol not in wanted or direction is None or symbol in out:
             continue
         try:
-            confidence = int(round(float(str(item.get("confidence")).rstrip("%"))))
+            confidence = round(float(str(item.get("confidence")).rstrip("%")))
         except (TypeError, ValueError):
             confidence = None
         if confidence is not None:

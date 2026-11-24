@@ -303,7 +303,8 @@ export function CalendarTable({
   horizon = "1h",
   reactionFilter = [],
 }: Props) {
-  const [sortRaw, setSortRaw] = useStoredString("fxnews.cal.sort.v3", "time:desc");
+  // v4: bump resets a stale saved sort (e.g. by reaction) back to the default newest-first
+  const [sortRaw, setSortRaw] = useStoredString("fxnews.cal.sort.v4", "time:desc");
   const { key: sortKey, dir } = parseSort(sortRaw);
   const now = useNowSlow();
   const lookup = useReactionLookup();
@@ -346,9 +347,10 @@ export function CalendarTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, sortKey, dir, horizon, filterKey, rxVersion, symPick]);
   const nextId = nextUpcomingId(items, now);
-  // The NOW divider only makes sense when ordered by time and the range includes now.
+  // The NOW divider marks the past/upcoming boundary wherever it lands in the current order
+  // (it stays at the time boundary even when the rows are sorted by another column).
   const nowIdx = (() => {
-    if (sortKey !== "time" || now < fromMs || now >= toMs) return -1;
+    if (now < fromMs || now >= toMs) return -1;
     const i = rows.findIndex((n) =>
       dir === "asc" ? itemTime(n) >= now : itemTime(n) < now,
     );
